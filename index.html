@@ -115,7 +115,15 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .screen:focus, main:focus { outline: none; }
 .stack { display: grid; gap: var(--space-6); }
 .stack--s1 { gap: var(--space-4); }
-#s1 { padding-block: var(--space-4) var(--space-6); }
+/* 홈·결과: 내용이 화면보다 짧으면 세로 가운데 */
+#s1:not([hidden]), #s3:not([hidden]) { min-block-size: 100vh; min-block-size: 100dvh; display: grid; align-content: center; }
+#s1 { padding-block: var(--space-6); }
+/* 용어집을 펼칠 때는 지금 위치에 고정하고 아래로만 늘어나게 */
+#s1.is-pinned { align-content: start; }
+.glossary:not([hidden]) { animation: gl-open 320ms var(--ease) both; }
+@keyframes gl-open { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .glossary:not([hidden]) { animation: none; } }
+#s3 { padding-block: var(--space-6); }
 .section { display: grid; gap: var(--space-3); }
 
 /* 화면이 바뀔 때 한 번, 아래에서 떠오르듯 */
@@ -135,12 +143,13 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   background: var(--color-bg); color: var(--color-text);
   font-size: 18px; font-weight: 600; line-height: 1.2; white-space: nowrap;
   cursor: pointer;
-  transition: transform 200ms var(--ease), box-shadow 200ms var(--ease), background-color 200ms var(--ease);
+  transition: transform 200ms var(--ease), border-color 200ms var(--ease), background-color 200ms var(--ease);
 }
-.button:hover { box-shadow: inset 0 0 0 1px currentColor; }
-.button--secondary:hover { box-shadow: inset 0 0 0 1px var(--color-border); }
+/* 호버: 안쪽 그림자 대신 테두리 색과 배경만 바꿈 (둥근 모서리가 깨져 보이지 않게) */
+.button--secondary:hover { border-color: var(--color-text); background: var(--color-surface); }
 .button:active { transform: scale(0.97); }
 .button--primary { background: var(--button-primary-bg); color: var(--button-primary-text); border-color: var(--button-primary-border); }
+.button--primary:hover:not(:disabled) { background: color-mix(in srgb, var(--button-primary-bg) 88%, #000); }
 .button--primary.button--big { min-block-size: 60px; padding-inline: 36px; font-size: 20px; }
 .button-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 
@@ -205,12 +214,12 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   background: var(--color-bg); color: var(--color-text);
   font-size: var(--text-body); font-weight: 500; line-height: 1.2; white-space: nowrap;
   cursor: pointer;
-  transition: box-shadow 200ms var(--ease), transform 200ms var(--ease);
+  transition: border-color 200ms var(--ease), background-color 200ms var(--ease), transform 200ms var(--ease);
 }
-.chip:hover:not([aria-disabled="true"]) { box-shadow: inset 0 0 0 1px var(--color-border); }
+.chip:hover:not([aria-disabled="true"]) { border-color: var(--color-text); }
 .chip:active:not([aria-disabled="true"]) { transform: scale(0.97); }
 .chip[aria-checked="true"] { background: var(--color-brand); border-color: var(--color-text); }
-.chip[aria-checked="true"]:hover { box-shadow: inset 0 0 0 1px var(--color-text); }
+.chip[aria-checked="true"]:hover { background: color-mix(in srgb, var(--color-brand) 88%, #000); }
 .chip-count { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
 .chip[aria-checked="true"] .chip-count { color: var(--color-text); }
 .chip[aria-disabled="true"] { border-style: dashed; color: var(--color-text-muted); cursor: not-allowed; }
@@ -229,7 +238,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   text-align: start; cursor: pointer; overflow: hidden;
   transition: transform 400ms var(--ease), box-shadow 400ms var(--ease);
 }
-.mode-card:hover:not(:disabled) { transform: translateY(-4px) scale(1.012); box-shadow: 0 24px 48px -24px rgba(29, 29, 31, 0.55); }
+.mode-card:hover:not(:disabled) { transform: translateY(-4px); box-shadow: 0 24px 48px -24px rgba(29, 29, 31, 0.55); }
 .mode-card:active:not(:disabled) { transform: scale(0.985); }
 .mode-card:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 4px; }
 .mode-card-name { font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: -0.03em; text-wrap: balance; }
@@ -264,7 +273,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid var(--color-hairline);
 }
-@media (max-width: 600px) { .topbar { margin-inline: calc(-1 * var(--space-2)); padding-inline: var(--space-2); } }
+@media (max-width: 600px) { .topbar { margin-inline: calc(-1 * var(--space-2)); padding-inline: var(--space-2); flex-wrap: nowrap; } .topbar .button { flex-shrink: 0; } }
 .topbar-info {
   display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px;
   font-size: var(--text-small); font-weight: 500; line-height: 1.5;
@@ -280,12 +289,13 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 
 .practice {
   max-inline-size: 1080px; margin-inline: auto;
-  display: grid; gap: var(--space-4); padding-block-start: 9vh;
+  display: grid; gap: var(--space-4); padding-block-start: max(6vh, calc(50vh - 260px));
 }
 /* 따라 치기: 입력창 없이 글자 위에 바로 침. 입력은 용어 위에 투명하게 겹친 칸이 받음 */
-.practice.is-overlay { position: relative; padding-block-start: 22vh; }
+/* 용어+설명 묶음이 화면 세로 가운데쯤 오도록 */
+.practice.is-overlay { --ov-top: max(14vh, calc(50vh - 170px)); position: relative; padding-block-start: var(--ov-top); }
 .practice.is-overlay .typing-input {
-  position: absolute; inset-inline: 0; inset-block-start: 22vh; block-size: calc(var(--text-term) * 2.4 + 160px);
+  position: absolute; inset-inline: 0; inset-block-start: var(--ov-top); block-size: calc(var(--text-term) * 2.4 + 160px);
   min-block-size: 0; padding: 0; border: 0; background: transparent; box-shadow: none !important;
   color: transparent; caret-color: transparent; opacity: 0.01; cursor: text; font-size: 16px; text-decoration: none; -webkit-text-fill-color: transparent;
 }
@@ -312,11 +322,11 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   border: 1px solid var(--color-border); border-radius: var(--radius-control);
   caret-color: var(--color-text);
   font-size: var(--text-input); font-weight: 600; line-height: 1.3; letter-spacing: -0.02em; text-align: center;
-  transition: background-color 200ms var(--ease), box-shadow 200ms var(--ease);
+  transition: background-color 200ms var(--ease), border-color 200ms var(--ease), box-shadow 200ms var(--ease);
 }
-.typing-input:hover { box-shadow: inset 0 0 0 1px var(--color-border); }
-.typing-input:focus, .typing-input:focus-visible { outline: none; background: var(--color-bg); border-color: var(--color-focus); box-shadow: inset 0 0 0 1px var(--color-focus), 0 12px 32px -18px rgba(29, 29, 31, 0.45); }
-.typing-input[aria-invalid="true"], .typing-input[aria-invalid="true"]:focus { border-color: var(--color-error); box-shadow: inset 0 0 0 1px var(--color-error); }
+.typing-input:hover { border-color: var(--color-text-muted); }
+.typing-input:focus, .typing-input:focus-visible { outline: none; background: var(--color-bg); border-color: var(--color-focus); box-shadow: 0 12px 32px -18px rgba(29, 29, 31, 0.45); }
+.typing-input[aria-invalid="true"], .typing-input[aria-invalid="true"]:focus { border-color: var(--color-error); }
 .typing-input.is-answer-wrong { color: var(--color-error); text-decoration: line-through; text-decoration-thickness: 2px; }
 .typing-field .status-line, .term-block > .status-line { text-align: center; }
 .term-block > .status-line { min-block-size: 1.5em; margin-block-start: 14px; margin-block-end: 0; font-weight: 600; }
@@ -341,7 +351,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   border-radius: 8px; background: var(--color-ink); color: var(--color-on-ink);
   font-weight: 700; font-size: 16px;
 }
-.lang-hint[data-lang="ko"] .lang-key { background: var(--color-brand); color: var(--color-text); box-shadow: inset 0 0 0 1px var(--color-text); }
+.lang-hint[data-lang="ko"] .lang-key { background: var(--color-brand); color: var(--color-text); outline: 1px solid var(--color-text); outline-offset: -1px; }
 .practice-actions { display: flex; justify-content: center; }
 .answer { white-space: nowrap; }
 
@@ -369,6 +379,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .topic-all:hover { color: var(--color-text); }
 .topics-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); padding-block-start: var(--space-2); border-top: 1px solid var(--color-hairline); }
 .button:disabled { opacity: 0.4; cursor: not-allowed; }
+@media (max-width: 600px) { .topics-foot .button-row { inline-size: 100%; display: grid; grid-template-columns: 1fr 1fr; } }
 .dialog p { font-size: 22px; font-weight: 700; line-height: 1.4; letter-spacing: -0.02em; }
 
 /* ── S3 결과 화면 ─────────────────── */
@@ -4987,6 +4998,16 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   }
   $("glossary-toggle").addEventListener("click", function () {
     var open = $("glossary").hidden;
+    var s1 = $("s1");
+    if (open) {
+      // 펼치기 전 위치를 그대로 위쪽 여백으로 잡아서 홈 화면이 위로 튀지 않게 함
+      var top = s1.firstElementChild.getBoundingClientRect().top - s1.getBoundingClientRect().top;
+      s1.style.paddingBlockStart = top + "px";
+      s1.classList.add("is-pinned");
+    } else {
+      s1.style.paddingBlockStart = "";
+      s1.classList.remove("is-pinned");
+    }
     $("glossary").hidden = !open;
     this.setAttribute("aria-expanded", open ? "true" : "false");
     $("glossary-toggle-text").textContent = open ? "용어 정리 접기" : "용어 정리 보기";
