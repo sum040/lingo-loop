@@ -286,7 +286,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .ch-svg .ch-ink { fill: var(--color-ink); }
 .ch-svg .ch-shine { fill: #fff; opacity: 0.55; }
 .ch-svg .ch-face { fill: #F7E6CF; stroke: var(--color-ink); stroke-width: 0.35px; paint-order: stroke; }
-.ch-svg .ch-tail { transform-box: fill-box; transform-origin: 0% 50%; animation: ch-tail 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.ch-svg .ch-tail { transform-box: fill-box; transform-origin: 0% 50%; animation: ch-tail 1.8s step-end infinite; }
 @keyframes ch-tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-8deg); } }
 .ch-svg .ch-tear { fill: var(--tear); }
 .ch-svg .ch-shadow { fill: rgba(29, 29, 31, 0.12); shape-rendering: geometricPrecision; }
@@ -297,7 +297,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .is-happy .ch-svg .f-normal, .is-sad .ch-svg .f-normal, .is-wow .ch-svg .f-normal { display: none; }
 .is-happy .ch-svg .f-happy, .is-sad .ch-svg .f-sad, .is-wow .ch-svg .f-wow { display: inline; }
 
-@keyframes ch-idle { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(0.25px) scaleY(0.975); } }
+/* 픽셀 캐릭터는 움직임을 두 장면으로 끊어 보여 줌 (부드럽게 조금씩 움직이면 픽셀 경계가 매 프레임 바뀌어 깜빡여 보임) */
+@keyframes ch-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(0.5px); } }
 @keyframes ch-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
 @keyframes ch-jump {
   0% { transform: translateY(0) scale(1, 1); }
@@ -311,8 +312,9 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 @keyframes ch-step-r { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(0); } }
 @keyframes ch-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes ch-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-.ch-svg .ch-body-g { animation: ch-idle 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
-.ch-svg .ch-eyes { animation: ch-blink 4.2s ease-in-out infinite; }
+.ch-svg .ch-body-g { animation: ch-idle 1.6s step-end infinite; }
+.ch-svg .ch-eyes { animation: ch-blink 4.2s step-end infinite; }
+.mini-avatar .ch-svg * { animation: none !important; }
 
 .avatar { --ch: var(--ch-1); position: relative; display: grid; justify-items: center; inline-size: 96px; }
 .avatar-fig { position: relative; inline-size: 64px; block-size: 57px; cursor: pointer; }
@@ -321,10 +323,10 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .avatar-flip { inline-size: 100%; block-size: 100%; transition: transform var(--dur-base) var(--ease); }
 .avatar.is-left .avatar-flip { transform: scaleX(-1); }
 .avatar.is-jump .avatar-motion { animation: ch-jump 640ms cubic-bezier(0.33, 0, 0.2, 1); }
-.avatar.is-wave .ch-arm-r { animation: ch-wave 380ms cubic-bezier(0.45, 0, 0.55, 1) 3; }
-.avatar.is-walk .ch-foot-l { animation: ch-step-l 340ms ease-in-out infinite; }
-.avatar.is-walk .ch-foot-r { animation: ch-step-r 340ms ease-in-out infinite; }
-.avatar.is-walk .avatar-motion { animation: ch-bounce 340ms ease-in-out infinite; }
+.avatar.is-wave .ch-arm-r { animation: ch-wave 380ms step-end 3; }
+.avatar.is-walk .ch-foot-l { animation: ch-step-l 340ms step-end infinite; }
+.avatar.is-walk .ch-foot-r { animation: ch-step-r 340ms step-end infinite; }
+.avatar.is-walk .avatar-motion { animation: ch-bounce 340ms step-end infinite; }
 .avatar.is-shake .avatar-motion { animation: ch-shake 300ms ease-in-out; }
 .avatar.is-out { opacity: 0.45; filter: grayscale(0.6); }
 .avatar-name {
@@ -1066,6 +1068,12 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     unlock: function () {
       if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this.ctx = null; } }
       if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      if (this.ctx && !this.out) {
+        // 효과음과 배경음악 볼륨을 따로 둠
+        this.out = this.ctx.createGain(); this.out.gain.value = 1; this.out.connect(this.ctx.destination);
+        this.musicBus = this.ctx.createGain(); this.musicBus.gain.value = 0.32; this.musicBus.connect(this.out);
+      }
+      if (this.ctx && Music.want && !Music.timer) Music.start(Music.want);
     },
     tone: function (freq, start, dur, type, vol, toFreq) {
       var c = this.ctx, t0 = c.currentTime + start;
@@ -1075,15 +1083,40 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+      o.connect(g); g.connect(this.out || c.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+    },
+    // 짧은 잡음 (타자 톡톡, 하이햇)
+    noise: function (start, dur, freq, vol, dest) {
+      var c = this.ctx, t0 = c.currentTime + start;
+      if (!this._nb) {
+        var len = Math.floor(c.sampleRate * 0.2), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+        for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        this._nb = buf;
+      }
+      var src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = this._nb; f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 1.2;
+      g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      src.connect(f); f.connect(g); g.connect(dest || this.out || c.destination);
+      src.start(t0); src.stop(t0 + dur + 0.02);
     },
     play: function (name) {
       if (!settings.sound) return;
       this.unlock();
       if (!this.ctx) return;
       try {
-        if (name === "tick") this.tone(660, 0, 0.12, "square", 0.06);
-        else if (name === "go") { this.tone(880, 0, 0.1, "square", 0.07); this.tone(1320, 0.08, 0.22, "square", 0.07); }
+        if (name === "tick" || name === "tick3" || name === "tick2" || name === "tick1") {
+          // 3, 2, 1로 갈수록 음이 올라감
+          var f0 = name === "tick3" ? 523 : name === "tick2" ? 587 : 659;
+          this.tone(f0, 0, 0.16, "square", 0.07); this.tone(f0 * 2, 0, 0.08, "sine", 0.05);
+        }
+        else if (name === "go") { this.tone(784, 0, 0.1, "square", 0.08); this.tone(1047, 0.07, 0.1, "square", 0.08); this.tone(1568, 0.14, 0.32, "square", 0.08); this.noise(0.14, 0.25, 6000, 0.08); }
+        else if (name === "key") this.noise(0, 0.035, 2600 + Math.random() * 1400, 0.22);
+        else if (name === "keyBack") this.noise(0, 0.04, 1500, 0.18);
+        else if (name === "keyEnter") { this.noise(0, 0.06, 1100, 0.25); this.tone(240, 0, 0.05, "sine", 0.06); }
+        else if (name === "combo") [1319, 1568, 2093].forEach(function (f, i) { Sound.tone(f, i * 0.05, 0.12, "triangle", 0.09); });
+        else if (name === "warn") this.tone(1760, 0, 0.07, "square", 0.05);
+        else if (name === "record") [523, 659, 784, 1047, 1319].forEach(function (f, i) { Sound.tone(f, i * 0.09, i === 4 ? 0.5 : 0.16, "square", 0.07); });
+        else if (name === "lifeLost") { this.tone(392, 0, 0.12, "square", 0.07); this.tone(262, 0.11, 0.28, "square", 0.07, 196); }
         else if (name === "correct") { this.tone(988, 0, 0.07, "triangle", 0.12); this.tone(1480, 0.05, 0.1, "triangle", 0.1); }
         else if (name === "wrong") this.tone(196, 0, 0.18, "sawtooth", 0.06, 150);
         else if (name === "miss") this.tone(520, 0, 0.32, "triangle", 0.14, 180);
@@ -1093,25 +1126,102 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       } catch (e) {}
     }
   };
+  // ── 배경음악: 파일 없이 Web Audio로 만든 짧은 반복 곡 ──
+  var Music = {
+    want: null, cur: null, timer: null, step: 0, next: 0, gain: null,
+    SONGS: {
+      // 대기실: 느긋한 로파이 느낌 (BPM 78, 부드러운 화음 + 낮은 베이스)
+      lobby: { bpm: 78, steps: 32, chords: [[261.6, 329.6, 392, 493.9], [220, 261.6, 329.6, 392], [174.6, 220, 261.6, 329.6], [196, 246.9, 293.7, 349.2]],
+               bass: [130.8, 110, 87.3, 98], lead: [659.3, 0, 587.3, 0, 523.3, 0, 0, 0, 523.3, 0, 493.9, 0, 440, 0, 0, 0, 440, 0, 523.3, 0, 587.3, 0, 0, 0, 587.3, 0, 523.3, 0, 493.9, 0, 0, 0] },
+      // 게임: 긴박하고 통통 튀는 느낌 (BPM 150, 옥타브로 튀는 베이스 + 아르페지오 + 하이햇)
+      game: { bpm: 150, steps: 32, chords: [[220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7], [164.8, 207.7, 246.9]],
+              bass: [110, 87.3, 98, 82.4] }
+    },
+    play: function (name) {
+      this.want = name;
+      if (!settings.sound || !Sound.ctx) { this.stop(true); return; }
+      if (this.cur === name && this.timer) return;
+      this.start(name);
+    },
+    start: function (name) {
+      this.stop(true);
+      var c = Sound.ctx; if (!c || !Sound.musicBus || !settings.sound) return;
+      this.cur = name; this.step = 0; this.next = c.currentTime + 0.12;
+      this.gain = c.createGain(); this.gain.gain.setValueAtTime(0.0001, c.currentTime);
+      this.gain.gain.exponentialRampToValueAtTime(1, c.currentTime + 0.8);
+      this.gain.connect(Sound.musicBus);
+      var self = this;
+      this.timer = setInterval(function () { self.schedule(); }, 25);
+      this.schedule();
+    },
+    stop: function (keepWant) {
+      if (!keepWant) this.want = null;
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      if (this.gain && Sound.ctx) {
+        var g = this.gain, t = Sound.ctx.currentTime;
+        try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4); } catch (e) {}
+        setTimeout(function () { try { g.disconnect(); } catch (e) {} }, 600);
+      }
+      this.gain = null; this.cur = null;
+    },
+    note: function (freq, t, dur, type, vol) {
+      var c = Sound.ctx, o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(this.gain); o.start(t); o.stop(t + dur + 0.02);
+    },
+    schedule: function () {
+      var c = Sound.ctx; if (!c || !this.gain) return;
+      var song = this.SONGS[this.cur], spb = 60 / song.bpm / 2;   // 8분음표 한 칸
+      while (this.next < c.currentTime + 0.15) {
+        var i = this.step % song.steps, bar = Math.floor(i / 8) % 4, t = this.next;
+        var ch = song.chords[bar], bs = song.bass[bar];
+        if (this.cur === "lobby") {
+          if (i % 8 === 0) ch.forEach(function (f, k) { Music.note(f, t + k * 0.03, spb * 7, "triangle", 0.045); });
+          if (i % 4 === 0) this.note(bs, t, spb * 3.5, "sine", 0.16);
+          var ld = song.lead[i]; if (ld) this.note(ld, t, spb * 1.8, "sine", 0.05);
+          if (i % 4 === 2) Sound.noise(t - c.currentTime, 0.05, 8000, 0.025, this.gain);
+        } else {
+          this.note(i % 2 ? bs * 2 : bs, t, spb * 0.7, "square", 0.07);                 // 통통 튀는 베이스
+          this.note(ch[i % 3] * 2, t, spb * 0.6, "square", 0.028);                      // 아르페지오
+          if (i % 4 === 0) Sound.noise(t - c.currentTime, 0.09, 180, 0.35, this.gain);  // 킥 비슷한 소리
+          Sound.noise(t - c.currentTime, i % 2 ? 0.03 : 0.05, 9000, i % 2 ? 0.04 : 0.07, this.gain); // 하이햇
+          if (i % 8 === 4) Sound.noise(t - c.currentTime, 0.12, 1800, 0.12, this.gain); // 스네어
+        }
+        this.next += spb; this.step++;
+      }
+    }
+  };
+
   var SOUND_ON = '<svg class="s-on" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5h3l4-3.5v12l-4-3.5H3z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 7a4 4 0 0 1 0 6M15.8 4.8a7 7 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   var SOUND_OFF = '<svg class="s-off" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5h3l4-3.5v12l-4-3.5H3z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 7.5l4 5M17.5 7.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   function renderSoundButtons() {
     document.querySelectorAll("[data-sound]").forEach(function (b) {
       if (!b.innerHTML) b.innerHTML = SOUND_ON + SOUND_OFF;
       b.setAttribute("aria-pressed", settings.sound ? "true" : "false");
-      b.setAttribute("aria-label", settings.sound ? "효과음 켜짐" : "효과음 꺼짐");
-      b.title = settings.sound ? "효과음 끄기" : "효과음 켜기";
+      b.setAttribute("aria-label", settings.sound ? "소리 켜짐 (효과음·배경음악)" : "소리 꺼짐");
+      b.title = settings.sound ? "소리 끄기" : "소리 켜기";
     });
   }
   document.addEventListener("click", function (e) {
     var b = e.target.closest("[data-sound]");
     if (!b) return;
     settings.sound = !settings.sound; saveSettings(); renderSoundButtons();
-    if (settings.sound) Sound.play("pop");
+    if (settings.sound) { Sound.play("pop"); if (Music.want) Music.play(Music.want); }
+    else Music.stop(true);
     refocusAfterClick(e);
   });
   document.addEventListener("pointerdown", function () { Sound.unlock(); }, { capture: true });
   document.addEventListener("keydown", function () { Sound.unlock(); }, { capture: true });
+  // 타자 톡톡: 글을 치는 모든 입력칸에서
+  document.addEventListener("keydown", function (e) {
+    var t = e.target;
+    if (!t || !(t.tagName === "INPUT" || t.tagName === "TEXTAREA") || t.disabled || t.readOnly || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "Backspace" || e.key === "Delete") Sound.play("keyBack");
+    else if (e.key === "Enter") Sound.play("keyEnter");
+    else if (e.key.length === 1 || e.key === "Process" || e.keyCode === 229) Sound.play("key");
+  });
 
   // ── 캐릭터 그림 (모두 같은 모양, 몸 색만 바뀜) ──
   // 원숭이: 몸, 귀, 밝은 얼굴, 꼬리만 있는 단순한 픽셀 모양
@@ -1342,6 +1452,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   function show(name) {
     screen = name;
     Object.keys(SCREENS).forEach(function (k) { $(SCREENS[k]).hidden = k !== name; });
+    if (name === "lobby") Music.play("lobby");
+    else if (name !== "play") Music.stop();
     document.title = (name === "lobby" ? "대기실" : name === "play" && G ? GAMES[G.game].name : name === "result" ? "결과" : "") + (name === "home" ? "Lingo Loop Match!" : " · Lingo Loop Match!");
     window.scrollTo(0, 0);
   }
@@ -2456,7 +2568,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (G.game === "race") st.dist += t.en.length;
     st.idx++;
     inp.value = ""; inp.setAttribute("aria-invalid", "false");
-    Sound.play("correct");
+    Sound.play(G.me.st.combo && G.me.st.combo % 5 === 0 ? "combo" : "correct");
     var av = G.me.ui && G.me.ui.av;
     pulse(av, "is-jump", 650); face(av, "is-happy", 700);
     if (G.game === "race" && st.idx >= G.course.terms.length) {
@@ -2534,7 +2646,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     G.ui.arena.appendChild(f);
     setTimeout(function () { f.remove(); w.node.remove(); }, 800);
     inp.value = ""; inp.setAttribute("aria-invalid", "false");
-    Sound.play("correct");
+    Sound.play(G.me.st.combo && G.me.st.combo % 5 === 0 ? "combo" : "correct");
     pulse(G.me.ui.av, "is-jump", 650); face(G.me.ui.av, "is-happy", 700);
     G.fall.target = null; paintFalling("");
     renderStats(); syncMine(true);
@@ -2573,7 +2685,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   function fallingHurt(elapsed) {
     var arena = G.ui.arena, st = G.me.st;
     {
-      Sound.play("miss");
+      Sound.play("lifeLost");
       arena.classList.remove("is-hit-ground"); void arena.offsetWidth; arena.classList.add("is-hit-ground");
       face(G.me.ui.av, "is-sad", 1000); pulse(G.me.ui.av, "is-shake", 320);
       if (st.lives <= 0) {
@@ -2656,20 +2768,33 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     var rows = standings(elapsed);
     var key = rows.map(function (r) { return r.p.id + ":" + r.st.score + ":" + r.st.lives + ":" + r.st.done; }).join("|");
     if (box._key === key) return;
-    box._key = key; box.innerHTML = "";
-    box.appendChild(el("h2", null, "순위"));
+    box._key = key;
+    // 줄을 매번 새로 만들지 않고 고쳐 씀 (새로 만들면 캐릭터가 다시 그려져 깜빡임)
+    if (!box._rows || box._roster !== G.players.map(function (p) { return p.id + p.color + p.name; }).join("|")) {
+      box.innerHTML = ""; box.appendChild(el("h2", null, "순위")); box._rows = {};
+      box._roster = G.players.map(function (p) { return p.id + p.color + p.name; }).join("|");
+    }
+    var order = rows.map(function (r) { return r.p.id; }).join("|");
     rows.forEach(function (r, i) {
-      var row = el("div", "board-row" + (r.p.isMe ? " is-me" : ""));
-      row.appendChild(el("span", "board-rank", String(i + 1)));
-      row.appendChild(miniAvatar(r.p.color));
-      var nm = el("span", "board-name", r.p.name + (r.p.isMe ? " (나)" : ""));
+      var u = box._rows[r.p.id];
+      if (!u) {
+        u = { row: el("div", "board-row" + (r.p.isMe ? " is-me" : "")) };
+        u.rank = el("span", "board-rank"); u.row.appendChild(u.rank);
+        u.row.appendChild(miniAvatar(r.p.color));
+        var nm = el("span", "board-name", r.p.name + (r.p.isMe ? " (나)" : ""));
+        u.sub = el("span", "text-small"); nm.appendChild(u.sub);
+        u.row.appendChild(nm);
+        u.val = el("span", "board-val"); u.row.appendChild(u.val);
+        box._rows[r.p.id] = u; box.appendChild(u.row);
+      }
       var sub = G.game === "falling" ? (r.st.done ? "탈락" : "목숨 " + r.st.lives) : r.p.sub || "";
       if (r.p.isRemote && !G.remoteAlive(r.p.id)) sub = "나감";
-      if (sub) nm.appendChild(el("span", "text-small", sub));
-      row.appendChild(nm);
-      row.appendChild(el("span", "board-val", fmtNum(r.st.score)));
-      box.appendChild(row);
+      u.rank.textContent = String(i + 1);
+      u.sub.textContent = sub; u.sub.hidden = !sub;
+      u.val.textContent = fmtNum(r.st.score);
     });
+    // 순위가 바뀌었을 때만 줄 순서를 바꿈
+    if (box._order !== order) { box._order = order; rows.forEach(function (r) { box.appendChild(box._rows[r.p.id].row); }); }
   }
 
   // 멀티: 내 상태 올리기
@@ -2767,19 +2892,20 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (elapsed < 0) {
       var n = Math.ceil(-elapsed / 1000);
       if (n > 3) n = 3;
-      if (G.cdShown !== n) { G.cdShown = n; $("cd-num").textContent = String(n); $("cd-num").classList.remove("is-tick"); void $("cd-num").offsetWidth; $("cd-num").classList.add("is-tick"); Sound.play("tick"); }
+      if (G.cdShown !== n) { G.cdShown = n; $("cd-num").textContent = String(n); $("cd-num").classList.remove("is-tick"); void $("cd-num").offsetWidth; $("cd-num").classList.add("is-tick"); Sound.play("tick" + n); if (n === 3) Music.stop(); }
       $("pl-time").textContent = fmtTime(timeLimit());
       G.raf = requestAnimationFrame(tick);
       return;
     }
     if (G.phase === "count") {
-      G.phase = "play"; $("countdown").hidden = true; Sound.play("go");
+      G.phase = "play"; $("countdown").hidden = true; Sound.play("go"); Music.play("game");
       if (document.activeElement !== inp && !openDialog) inp.focus();
       inp.value = "";
     }
     var left = timeLimit() - elapsed;
     $("pl-time").textContent = fmtTime(left);
     $("pl-time").classList.toggle("is-low", left <= 10000);
+    if (left <= 10000 && left > 0) { var ws = Math.ceil(left / 1000); if (G.warnS !== ws) { G.warnS = ws; Sound.play("warn"); } }
     if (G.game === "falling" && !G.me.st.done) updateFalling(elapsed);
     if (G.game === "sixty" && G.ui.big) { var s = Math.max(0, Math.ceil(left / 1000)); if (G.ui.big.textContent !== String(s)) { G.ui.big.textContent = String(s); G.ui.big.classList.toggle("is-low", s <= 10); } }
     if (G.game === "race" && G.ui.grace) {
@@ -2807,6 +2933,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     var st = g.me.st;
     if (g.game === "sixty" || (g.game === "falling" && !st.done)) { st.doneAt = st.doneAt == null ? null : st.doneAt; }
     syncMine(true);
+    Music.stop();
     Sound.play("end");
     var show2 = function () {
       if (G !== g) return;
@@ -2850,6 +2977,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     } else bestLine = "멀티 대전 결과는 저장하지 않아요";
     $("rs-best").textContent = bestLine;
     $("rs-new").hidden = !isNew;
+    if (isNew) setTimeout(function () { Sound.play("record"); }, 700);
     // 숫자 타일
     var tiles = [
       ["맞힌 용어", st.correct + "개"],
