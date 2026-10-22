@@ -5650,20 +5650,12 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (!langMsg && judged.length > p && statusEl.textContent.indexOf("한/영") >= 0) setStatus("");
     if (!langMsg) {
       var full = judged + compPart;
-      if (full.length >= target.length && !sameStr(full, target)) { if (!statusEl.textContent) setStatus(TYPO_MSG); }
-      else if (statusEl.textContent === TYPO_MSG) setStatus("");
+      if (full.length >= target.length && !sameStr(full, target)) { if (!statusEl.textContent || statusEl.textContent === DONE_MSG) setStatus(TYPO_MSG); }
+      else if (sameStr(full, target)) { if (!statusEl.textContent || statusEl.textContent === TYPO_MSG) setStatus(DONE_MSG); }
+      else if (statusEl.textContent === TYPO_MSG || statusEl.textContent === DONE_MSG) setStatus("");
     }
     paintChars(judged, langMsg ? "" : compPart);
-
-    // 다 쳤으면 다음으로. 마지막 글자가 조합 중이어도 목표와 같으면 완료
-    if (sameStr(judged, target) && !compPart) { finishCopy(); return; }
-    if (compPart && sameStr(judged + compPart, target)) {
-      for (var m = 0; m < compPart.length; m++) countChar(a, compPart[m], target[judged.length + m]);
-      prevJudged = target;
-      a.input = target;
-      paintChars(target);
-      finishCopy();
-    }
+    // 다 쳐도 바로 넘어가지 않음. Enter를 눌러야 다음 용어로 (submitCopy)
   }
   function countChar(a, ch, want) {
     a.typedUnits++;
@@ -5678,12 +5670,19 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   }
   // 따라 치기: 틀린 글자를 고치지 않고 Enter로 넘어가면 그때 틀린 용어가 됨
   var TYPO_MSG = "틀린 글자가 있어요. 고치거나 Enter로 넘어가요.";
+  var DONE_MSG = "다 쳤어요. Enter를 눌러요.";
   function submitCopy() {
     var a = cur();
     if (!a || a.outcome !== "pending") return;
     var final = cleanInput(input.value);
     if (!final.trim()) return;
-    if (sameStr(final, a.target)) { finishCopy(); return; }
+    if (sameStr(final, a.target)) {
+      // 조합 중이던 마지막 글자들은 아직 안 셌으므로 여기서 셈
+      for (var m = prevJudged.length; m < a.target.length; m++) countChar(a, a.target[m], a.target[m]);
+      prevJudged = a.target;
+      finishCopy();
+      return;
+    }
     markStarted();
     a.input = final;
     a.outcome = "wrong";

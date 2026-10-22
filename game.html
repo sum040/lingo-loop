@@ -2519,7 +2519,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   function setLang(ko) {
     $("lang-hint").classList.toggle("is-ko", ko);
     $("lang-key").textContent = ko ? "한" : "A";
-    $("lang-text").textContent = ko ? "한글로 입력되고 있어요. 한/영 키를 눌러 주세요." : "영어로 쳐요 · 다 치면 저절로 넘어가요";
+    $("lang-text").textContent = ko ? "한글로 입력되고 있어요. 한/영 키를 눌러 주세요." : "영어로 쳐요 · 다 친 뒤 Enter를 눌러요";
   }
   inp.addEventListener("compositionstart", function () { playComposing = true; });
   inp.addEventListener("compositionend", function () { playComposing = false; onPlayInput({ inputType: "insertText" }); });
@@ -2537,7 +2537,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (insert && n.length) { if (ok) st.ck++; else st.wk++; }
     if (!ok && insert && n.length) { if (!G._badSound || nowMs() - G._badSound > 300) { G._badSound = nowMs(); } }
     inp.setAttribute("aria-invalid", ok ? "false" : "true");
-    if (n === tn) { acceptTerm(t); return; }
+    // 다 쳐도 바로 넘어가지 않고 Enter를 눌러야 넘어감
+    enterHint(n === tn);
     renderTerm();
     renderStats();
   }
@@ -2550,11 +2551,25 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       var n = norm(inp.value);
       if (RE_HANGUL.test(inp.value)) { inp.value = ""; setLang(true); renderTerm(); return; }
       if (!n) return;
+      if (G.game === "falling") {
+        var hit = exactFalling(n);
+        if (hit) { hitWord(hit); return; }
+      } else {
+        var t = curTerm();
+        if (t && norm(t.en) === n) { acceptTerm(t); return; }
+      }
       wrongSubmit();
     } else if (e.key === "Escape") {
       e.preventDefault(); askQuit();
     }
   });
+  // 다 쳤을 때만 Enter 안내를 보이고, 다른 안내(오타 횟수, 정답 등)는 지우지 않음
+  var ENTER_HINT = "다 쳤어요. Enter를 눌러요";
+  function enterHint(on) {
+    var ps = $("play-status");
+    if (on) ps.textContent = ENTER_HINT;
+    else if (ps.textContent === ENTER_HINT) ps.textContent = "";
+  }
   function shakeInput() { inp.classList.remove("is-shake"); void inp.offsetWidth; inp.classList.add("is-shake"); }
   function addMissed(st, term) { if (!st.missedIds[term.id]) { st.missedIds[term.id] = 1; st.missed.push(term); } }
   function acceptTerm(t) {
@@ -2563,7 +2578,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (G.game === "sixty") st.score += Math.round(t.en.length * 10 * comboMult(st.combo));
     if (G.game === "race") st.dist += t.en.length;
     st.idx++;
-    inp.value = ""; inp.setAttribute("aria-invalid", "false");
+    inp.value = ""; inp.setAttribute("aria-invalid", "false"); enterHint(false);
     Sound.play(G.me.st.combo && G.me.st.combo % 5 === 0 ? "combo" : "correct");
     var av = G.me.ui && G.me.ui.av;
     pulse(av, "is-jump", 650); face(av, "is-happy", 700);
@@ -2601,18 +2616,21 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 
   // 떨어지는 용어
   function fallingInput(n, insert) {
-    var st = G.me.st, best = null, exact = null;
+    var st = G.me.st, best = null, exact = n ? exactFalling(n) : null;
     G.fall.active.forEach(function (w) {
-      if (w.gone) return;
-      var tn = w.n;
-      if (n && tn.indexOf(n) === 0) { if (!best || w.prog > best.prog) best = w; }
-      if (n && tn === n) { if (!exact || w.prog > exact.prog) exact = w; }
+      if (!w.gone && n && w.n.indexOf(n) === 0 && (!best || w.prog > best.prog)) best = w;
     });
+    if (exact) best = exact;
     if (insert && n.length) { if (best) st.ck++; else st.wk++; }
     inp.setAttribute("aria-invalid", n && !best ? "true" : "false");
-    if (exact) { hitWord(exact); return; }
     G.fall.target = best;
+    enterHint(!!exact);
     paintFalling(n);
+  }
+  function exactFalling(n) {
+    var exact = null;
+    G.fall.active.forEach(function (w) { if (!w.gone && w.n === n && (!exact || w.prog > exact.prog)) exact = w; });
+    return exact;
   }
   function paintFalling(n) {
     G.fall.active.forEach(function (w) {
@@ -2641,7 +2659,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     f.style.left = w.x + "px"; f.style.top = w.y + "px";
     G.ui.arena.appendChild(f);
     setTimeout(function () { f.remove(); w.node.remove(); }, 800);
-    inp.value = ""; inp.setAttribute("aria-invalid", "false");
+    inp.value = ""; inp.setAttribute("aria-invalid", "false"); enterHint(false);
     Sound.play(G.me.st.combo && G.me.st.combo % 5 === 0 ? "combo" : "correct");
     pulse(G.me.ui.av, "is-jump", 650); face(G.me.ui.av, "is-happy", 700);
     G.fall.target = null; paintFalling("");
