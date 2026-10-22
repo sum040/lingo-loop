@@ -146,7 +146,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .time-left.is-low { color: var(--color-error); }
 
 /* ── 게임 목록 화면 ─────────────────── */
-.hero { display: grid; justify-items: center; gap: 12px; text-align: center; padding-block: var(--space-6) var(--space-4); }
+.hero { display: grid; justify-items: center; gap: 12px; text-align: center; padding-block: var(--space-3) var(--space-4); }
 .hero h1 { font-size: var(--text-hero); font-weight: 800; line-height: 1.05; letter-spacing: -0.045em; }
 .hero-accent { background: linear-gradient(transparent 62%, var(--color-brand) 62%, var(--color-brand) 92%, transparent 92%); padding-inline: 0.04em; }
 .hero p { font-size: var(--text-lede); line-height: 1.45; color: var(--color-text-muted); font-weight: 500; letter-spacing: -0.02em; }
@@ -264,10 +264,14 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .topic-group-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .topic-group-head h3 { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
 
-.multi-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2); }
-@media (max-width: 600px) { .multi-options { grid-template-columns: minmax(0, 1fr); } }
-.multi-option { display: grid; gap: 12px; align-content: start; padding: var(--space-3); border-radius: var(--radius-card); background: var(--color-surface); }
-.multi-option h3 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.join-box { box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-2) var(--space-4); margin-block-start: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-tile); background: var(--color-surface); border: 2px solid var(--color-ink); }
+.join-text { display: grid; gap: 4px; }
+.join-title { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; }
+.join-form { display: flex; gap: 10px; align-items: center; }
+.join-form .text-input--code { inline-size: 200px; }
+.join-box .status-line, .join-box .local-note { grid-column: 1 / -1; margin: 0; }
+.join-box .status-line:empty { display: none; }
+@media (max-width: 720px) { .join-box { grid-template-columns: minmax(0, 1fr); } .join-form .text-input--code { inline-size: auto; flex: 1; } }
 .local-note { padding: 12px 16px; border-radius: var(--radius-control); background: var(--color-surface); font-size: var(--text-small); color: var(--color-text-muted); }
 
 .status-line { font-size: var(--text-small); line-height: 1.5; min-block-size: 1.5em; color: var(--color-text-muted); }
@@ -376,7 +380,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   cursor: default;
 }
 .stage-floor { position: absolute; inset-inline: 0; inset-block-end: 0; block-size: 92px; background: rgba(29, 29, 31, 0.05); border-top: 1px solid var(--color-hairline); }
-.stage .avatar { position: absolute; transform: translate(-50%, -100%); transition: left 110ms linear, top 110ms linear; }
+.stage .avatar { position: absolute; transform: translate(-50%, -100%); }
 .stage .avatar.is-me { z-index: 2; }
 .stage-help { position: absolute; inset-block-start: 16px; inset-inline-start: 20px; font-size: var(--text-small); color: var(--color-text-muted); font-weight: 500; pointer-events: none; }
 .chat-bar { position: absolute; inset-inline: 16px; inset-block-end: 16px; display: flex; align-items: center; gap: 12px; z-index: 4; }
@@ -427,6 +431,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .char { color: #8E8A84; transition: color 100ms linear; }
 .char.is-ok { color: var(--color-text); }
 .char.is-cur { box-shadow: inset 0 -5px 0 var(--color-text); }
+.char--space.is-bad { background: rgba(196, 43, 28, 0.18); }
 .char.is-bad { color: var(--color-error); text-decoration: underline; text-decoration-thickness: 4px; text-underline-offset: 0.1em; }
 .term-ko { font-size: 21px; font-weight: 600; color: var(--color-text-muted); min-block-size: 1.5em; }
 .term-next { font-size: var(--text-small); color: var(--color-quiet); min-block-size: 1.5em; }
@@ -601,7 +606,20 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         <span class="game-card-meta"><span class="game-card-best" data-best="sixty"></span><span class="start">게임 시작</span></span>
       </button>
     </div>
-    <p class="text-small home-note">게임에는 영어 용어만 나와요 · 대소문자, 띄어쓰기, 하이픈은 달라도 맞아요 · 최고 기록은 이 브라우저에만 남아요</p>
+    <section class="join-box rise rise-3" aria-labelledby="join-title">
+      <div class="join-text">
+        <h2 class="join-title" id="join-title">친구 방에 참가하기</h2>
+        <p class="text-small">친구에게 받은 방 코드 5자리를 넣어 주세요</p>
+      </div>
+      <div class="join-form">
+        <label class="visually-hidden" for="multi-code">방 코드</label>
+        <input class="text-input text-input--code" id="multi-code" type="text" maxlength="5" autocomplete="off" spellcheck="false" placeholder="ABCDE" lang="en">
+        <button class="button button--primary" type="button" id="multi-join">참가하기</button>
+      </div>
+      <p class="local-note" id="multi-local" hidden>지금은 온라인 서버(Firebase)에 연결하기 전이라, 같은 브라우저의 다른 탭끼리만 함께할 수 있어요.</p>
+      <p class="status-line" id="multi-status" aria-live="polite"></p>
+    </section>
+    <p class="text-small home-note">게임에는 영어 용어만 나와요 · 띄어쓰기는 그대로 쳐야 하고, 대소문자와 하이픈은 달라도 맞아요 · 최고 기록은 이 브라우저에만 남아요</p>
   </section>
 
   <!-- 대기실 -->
@@ -740,37 +758,6 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     </div>
   </div>
 
-  <!-- 멀티: 방 만들기 / 코드로 참가 -->
-  <div class="scrim" id="dlg-multi" hidden>
-    <div class="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="multi-title" style="grid-template-rows: auto auto auto;">
-      <div class="dialog-head">
-        <h2 id="multi-title">멀티 대전</h2>
-        <p class="text-small">최대 8명까지 함께해요</p>
-      </div>
-      <div class="dialog-body">
-        <p class="local-note" id="multi-local" hidden>지금은 온라인 서버(Firebase)에 연결하기 전이라, 같은 브라우저의 다른 탭끼리만 함께할 수 있어요.</p>
-        <div class="multi-options">
-          <div class="multi-option">
-            <h3>방 만들기</h3>
-            <p class="text-small">방 코드가 자동으로 생겨요. 친구에게 코드를 알려 주세요.</p>
-            <button class="button button--primary" type="button" id="multi-create">방 만들기</button>
-          </div>
-          <div class="multi-option">
-            <h3>방 코드로 참가</h3>
-            <label class="visually-hidden" for="multi-code">방 코드</label>
-            <input class="text-input text-input--code" id="multi-code" type="text" maxlength="5" autocomplete="off" spellcheck="false" placeholder="ABCDE" lang="en">
-            <button class="button" type="button" id="multi-join">참가하기</button>
-          </div>
-        </div>
-        <p class="status-line" id="multi-status" aria-live="polite"></p>
-      </div>
-      <div class="dialog-foot">
-        <span></span>
-        <button class="button" type="button" id="multi-back">뒤로</button>
-      </div>
-    </div>
-  </div>
-
   <!-- 닉네임 정하기 -->
   <div class="scrim" id="dlg-name" hidden>
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="name-title">
@@ -868,7 +855,9 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   function saveSettings() { store.settings = settings; store.best = best; saveStore(); }
 
   // ── 정답 비교: 연습과 같은 규칙 (대소문자·띄어쓰기·하이픈·가운뎃점·슬래시·따옴표·점 무시) ──
-  function norm(s) { return s.normalize("NFC").trim().toLowerCase().replace(/[\s\-\u2010-\u2015·\u00B7\u30FB\/'’.]/g, ""); }
+  // 비교용: 대소문자·하이픈·가운뎃점·슬래시·따옴표·마침표는 무시, 띄어쓰기는 직접 쳐야 함 (여러 칸은 한 칸으로)
+  function norm(s) { return s.normalize("NFC").toLowerCase().replace(/[\-\u2010-\u2015·\u00B7\u30FB\/'’.]/g, "").replace(/\s+/g, " ").replace(/^ /, ""); }
+  function sigChar(c) { return c === " " || norm(c) !== ""; }
   var RE_HANGUL = /[ᄀ-ᇿ㄰-㆏가-힣]/;
 
   // ── 욕설 가리기 (목록 방식이라 변형된 말은 빠질 수 있음) ──
@@ -1327,7 +1316,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   }
   var openDialog = null;
   function setDialog(id) {
-    ["dlg-room", "dlg-multi", "dlg-confirm", "dlg-name"].forEach(function (d) { $(d).hidden = d !== id; });
+    ["dlg-room", "dlg-confirm", "dlg-name"].forEach(function (d) { $(d).hidden = d !== id; });
     openDialog = id;
     Object.keys(SCREENS).forEach(function (k) { if (id) $(SCREENS[k]).setAttribute("inert", ""); else $(SCREENS[k]).removeAttribute("inert"); });
   }
@@ -1504,7 +1493,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     $("room-title").textContent = mode === "edit" ? "게임·주제 바꾸기" : "방 만들기";
     $("room-sub").textContent = mode === "edit" ? "바꾸면 모두의 준비 완료가 풀려요" : "게임, 방 종류, 주제를 골라요";
     $("f-type").hidden = mode === "edit";
-    $("room-next").textContent = mode === "edit" ? "바꾸기" : "다음";
+    $("room-next").textContent = mode === "edit" ? "바꾸기" : roomDraft.roomType === "multi" ? "방 만들기" : "다음";
     renderRoomDialog();
     setDialog("dlg-room");
     setTimeout(function () { ($("room-next").disabled ? $("room-topics").querySelector(".choice") : $("room-next")).focus(); }, 30);
@@ -1535,6 +1524,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     ], d.bots, "bots");
     renderTopicChips();
     validateRoom();
+    if (d.mode !== "edit") $("room-next").textContent = d.roomType === "multi" ? "방 만들기" : "다음";
   }
   function renderTopicChips() {
     var box = $("room-topics"), d = roomDraft;
@@ -1653,47 +1643,44 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (d.mode === "edit") { setDialog(null); Room.changeGame(d.game, d.cats); $("chat-input").focus(); return; }
     settings.game = d.game; settings.roomType = d.roomType; settings.bots = d.bots; settings.cats = d.cats.slice();
     saveSettings();
-    if (d.roomType === "multi") { openMultiDialog(); return; }
+    if (d.roomType === "multi") {
+      setDialog(null);
+      ensureName(createMultiRoom, function () { openRoomDialog("create", settings.game); });
+      return;
+    }
     setDialog(null);
     ensureName(startLocalGame, function () { openRoomDialog("create", settings.game); });
   });
 
-  // ── 멀티: 방 만들기 / 방 코드로 참가 ─────────────
-  function openMultiDialog(prefill) {
-    $("multi-local").hidden = !!FIREBASE_CONFIG;
-    $("multi-status").textContent = ""; $("multi-status").className = "status-line";
-    $("multi-code").value = prefill || ""; $("multi-code").setAttribute("aria-invalid", "false");
-    setDialog("dlg-multi");
-    setTimeout(function () { (prefill ? $("multi-join") : $("multi-create")).focus(); }, 30);
-    getNet().catch(function () { multiError("온라인 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."); });
+  // ── 멀티: 방 만들기 (방 만들기 팝업에서) / 방 코드로 참가 (홈 화면) ─────────────
+  function createMultiRoom() {
+    var btn = $("room-next");
+    toast("방을 만드는 중이에요…");
+    getNet().then(function () { return Room.create(); })
+      .catch(function (err) {
+        openRoomDialog("create", settings.game);
+        var st = $("room-status"); st.className = "status-line status-line--error";
+        st.textContent = err && err.userMsg || "방을 만들지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.";
+        btn.focus();
+      });
   }
   function multiError(text) { $("multi-status").className = "status-line status-line--error"; $("multi-status").textContent = text; }
-  function multiBusy(on) { ["multi-create", "multi-join", "multi-back"].forEach(function (id) { $(id).disabled = on; }); if (on) { $("multi-status").className = "status-line"; $("multi-status").textContent = "연결하는 중이에요…"; } }
-  $("multi-back").addEventListener("click", function () { openRoomDialog("create", settings.game); });
-  $("dlg-multi").addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { e.preventDefault(); setDialog(null); return; }
-    trapTab($("dlg-multi"), e);
-  });
-  $("dlg-multi").addEventListener("mousedown", function (e) { if (e.target === $("dlg-multi")) setDialog(null); });
+  function multiBusy(on) { $("multi-join").disabled = on; if (on) { $("multi-status").className = "status-line"; $("multi-status").textContent = "연결하는 중이에요…"; } else $("multi-status").textContent = ""; }
+  $("multi-local").hidden = !!FIREBASE_CONFIG;
   $("multi-code").addEventListener("input", function () {
     var v = $("multi-code").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (v !== $("multi-code").value) $("multi-code").value = v;
     $("multi-code").setAttribute("aria-invalid", "false");
+    if ($("multi-status").classList.contains("status-line--error")) { $("multi-status").textContent = ""; $("multi-status").className = "status-line"; }
   });
   $("multi-code").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing) $("multi-join").click(); });
-  $("multi-create").addEventListener("click", function () {
-    if (!settings.name) { openNameDialog(function () { openMultiDialog(); $("multi-create").click(); }, function () { openMultiDialog(); }); return; }
-    multiBusy(true);
-    getNet().then(function () { return Room.create(); }).then(function () { multiBusy(false); setDialog(null); })
-      .catch(function (err) { multiBusy(false); multiError(err && err.userMsg || "방을 만들지 못했어요. 다시 시도해 주세요."); });
-  });
   $("multi-join").addEventListener("click", function () {
     var code = $("multi-code").value.trim().toUpperCase();
     if (code.length !== 5) { $("multi-code").setAttribute("aria-invalid", "true"); multiError("방 코드 5자리를 넣어 주세요."); $("multi-code").focus(); return; }
-    if (!settings.name) { openNameDialog(function () { openMultiDialog(code); $("multi-join").click(); }, function () { openMultiDialog(code); }); return; }
+    if (!settings.name) { openNameDialog(function () { $("multi-join").click(); }, function () { $("multi-code").focus(); }); return; }
     multiBusy(true);
-    getNet().then(function () { return Room.join(code); }).then(function () { multiBusy(false); setDialog(null); })
-      .catch(function (err) { multiBusy(false); $("multi-code").setAttribute("aria-invalid", "true"); multiError(err && err.userMsg || "들어가지 못했어요. 다시 시도해 주세요."); });
+    getNet().then(function () { return Room.join(code); }).then(function () { multiBusy(false); $("multi-code").value = ""; })
+      .catch(function (err) { multiBusy(false); $("multi-code").setAttribute("aria-invalid", "true"); multiError(err && err.userMsg || "들어가지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."); $("multi-code").focus(); });
   });
   function userErr(msg) { var e = new Error(msg); e.userMsg = msg; return e; }
 
@@ -1909,11 +1896,11 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         if (p.isMe && self.pos) return; // 내 위치는 내가 움직이는 값으로 그림
         if (p.isMe && !self.pos) self.pos = { x: p.x || 0.5, y: p.y || 0.7 };
         var x = p.isMe ? self.pos.x : (p.x || 0.5), y = p.isMe ? self.pos.y : (p.y || 0.7);
-        var oldX = parseFloat(a.style.left);
-        if (!isNaN(oldX) && Math.abs(oldX - x * 100) > 0.05) {
-          a.classList.toggle("is-left", x * 100 < oldX);
-          a.classList.add("is-walk");
-          clearTimeout(a._walkT); a._walkT = setTimeout(function () { a.classList.remove("is-walk"); }, 220);
+        if (!p.isMe) {
+          // 다른 사람은 받은 위치를 목표로 두고, 매 프레임 조금씩 따라가 부드럽게 걷게 함
+          a._tx = x; a._ty = y;
+          if (a._cx != null) return;
+          a._cx = x; a._cy = y;
         }
         a.style.left = (x * 100) + "%"; a.style.top = (y * 100) + "%";
         a.style.zIndex = Math.round(y * 100) + (p.isMe ? 1 : 0);
@@ -1981,17 +1968,39 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
             a.style.zIndex = Math.round(self.pos.y * 100) + 1;
             if (dx) a.classList.toggle("is-left", dx < 0);
             a.classList.add("is-walk");
-            if (t - self.lastSend > 100) { self.lastSend = t; Room.setMine({ x: +self.pos.x.toFixed(4), y: +self.pos.y.toFixed(4) }); }
+            if (t - self.lastSend > 60) { self.lastSend = t; Room.setMine({ x: +self.pos.x.toFixed(4), y: +self.pos.y.toFixed(4) }); }
             self.walking = true;
           } else if (self.walking) {
             self.walking = false;
             if (a) a.classList.remove("is-walk");
             Room.setMine({ x: +self.pos.x.toFixed(4), y: +self.pos.y.toFixed(4) });
           }
+          self.follow(dt);
         }
         self.raf = requestAnimationFrame(step);
       }
       this.raf = requestAnimationFrame(step);
+    },
+    follow: function (dt) {
+      var stage = $("stage"), w = stage.clientWidth || 800, h = stage.clientHeight || 560, self = this;
+      Object.keys(this.avatars).forEach(function (id) {
+        var a = self.avatars[id];
+        if (id === Net.uid || a._tx == null) return;
+        var dx = (a._tx - a._cx) * w, dy = (a._ty - a._cy) * h, dist = Math.hypot(dx, dy);
+        if (dist < 0.5) {
+          // 다음 위치가 곧 올 수 있으니 잠깐 기다렸다가 걷기를 멈춤
+          if (a._moving && performance.now() - a._lastMove > 180) { a._moving = false; a.classList.remove("is-walk"); }
+          return;
+        }
+        // 멀리 떨어졌으면 바로 옮기고, 가까우면 걷는 속도로 따라감
+        var move = dist > 260 ? dist : Math.min(dist, Math.max(200 * dt, dist * 8 * dt));
+        a._cx += dx / dist * move / w; a._cy += dy / dist * move / h;
+        a.style.left = (a._cx * 100) + "%"; a.style.top = (a._cy * 100) + "%";
+        a.style.zIndex = Math.round(a._cy * 100);
+        if (Math.abs(dx) > 0.5) a.classList.toggle("is-left", dx < 0);
+        a._lastMove = performance.now();
+        if (!a._moving) { a._moving = true; a.classList.add("is-walk"); }
+      });
     },
     showEvent: function (ev) {
       var a = this.avatars[ev.uid];
@@ -2292,8 +2301,14 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     var k = 0, matched = ok ? typed.length : prefixLen(typed, tn), curSet = false;
     var word = el("span", "word");
     for (var i = 0; i < t.en.length; i++) {
-      var ch = t.en[i], sig = norm(ch) !== "";
-      if (ch === " ") { box.appendChild(word); box.appendChild(document.createTextNode(" ")); word = el("span", "word"); continue; }
+      var ch = t.en[i], sig = sigChar(ch);
+      if (ch === " ") {
+        box.appendChild(word); word = el("span", "word");
+        var sp = el("span", "char char--space", " ");
+        if (k < matched) sp.classList.add("is-ok");
+        else if (!curSet) { curSet = true; sp.classList.add(ok ? "is-cur" : "is-bad"); }
+        k++; box.appendChild(sp); continue;
+      }
       var s = el("span", "char", ch);
       if (sig) {
         if (k < matched) s.classList.add("is-ok");
@@ -2428,7 +2443,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     });
   }
   // 정규화 글자 수 k만큼 맞았을 때, 원래 용어에서 몇 글자까지 칠할지
-  function matchedChars(s, k) { var c = 0; for (var i = 0; i < s.length; i++) { if (norm(s[i]) !== "") { if (c === k) return i; c++; } } return s.length; }
+  function matchedChars(s, k) { var c = 0; for (var i = 0; i < s.length; i++) { if (sigChar(s[i])) { if (c === k) return i; c++; } } return s.length; }
   function clearFallingMatch() { G.fall.target = null; paintFalling(""); }
   function hitWord(w) {
     var st = G.me.st;
