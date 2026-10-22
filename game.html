@@ -1,0 +1,2596 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>타자 게임 · Lingo Loop</title>
+<style>
+/* Pretendard (SIL OFL 1.1, github.com/orioncactus/pretendard). index.html에 넣은 것과 같은 글자 묶음 */
+@font-face { font-family: "Pretendard Variable"; font-weight: 45 920; font-style: normal; font-display: swap; src: url(assets/pretendard-subset.woff2) format("woff2"); }
+
+/* 색·크기·움직임 토큰은 index.html과 같음. 캐릭터 전용 12색만 새로 더함 (scope/game-v1-scope.md) */
+:root {
+  color-scheme: light;
+  --color-brand: #F2C230;
+  --color-bg: #FFFFFF;
+  --color-surface: #F5F5F7;
+  --color-ink: #1D1D1F;
+  --color-on-ink: #F5F5F7;
+  --color-on-ink-muted: #A1A1A6;
+  --color-text: #1D1D1F;
+  --color-text-muted: #5F5850;
+  --color-quiet: #8A847C;
+  --color-border: #7D766C;
+  --color-focus: #1D1D1F;
+  --color-error: #C42B1C;
+  --color-scrim: rgba(29, 29, 31, 0.5);
+  --color-glass: rgba(255, 255, 255, 0.78);
+  --color-hairline: rgba(29, 29, 31, 0.12);
+
+  /* 캐릭터 몸 색에만 씀. 글자·버튼·테두리에는 쓰지 않음 */
+  --ch-1: #F2C230; --ch-2: #F0913C; --ch-3: #EA6B55; --ch-4: #F29BB4;
+  --ch-5: #B9609E; --ch-6: #8574CC; --ch-7: #4A82D6; --ch-8: #7CC6E6;
+  --ch-9: #33A597; --ch-10: #A3C760; --ch-11: #5A9A4E; --ch-12: #9C6F4E;
+  --tear: #7CC6E6;
+
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+    system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo",
+    "Noto Sans KR", "Malgun Gothic", sans-serif;
+
+  --text-hero: clamp(44px, 6.6vw, 88px);
+  --text-display: clamp(80px, 11vw, 150px);
+  --text-term: clamp(40px, 5.6vw, 72px);
+  --text-title: clamp(36px, 4.4vw, 56px);
+  --text-lede: clamp(19px, 1.8vw, 24px);
+  --text-input: clamp(24px, 2.6vw, 32px);
+  --text-stat: clamp(26px, 2.6vw, 36px);
+  --text-section: 24px;
+  --text-body: 17px;
+  --text-small: 16px;
+
+  --radius-tile: 28px;
+  --radius-card: 22px;
+  --radius-control: 18px;
+  --radius-pill: 980px;
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+  --space-8: 64px;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 360ms;
+  --press: scale(0.97);
+}
+
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scrollbar-gutter: stable; }
+html, body { min-height: 100%; }
+body {
+  margin: 0; font-family: var(--font-sans); font-size: var(--text-body); font-weight: 400; line-height: 1.55;
+  letter-spacing: -0.01em; color: var(--color-text); background: var(--color-bg);
+  -webkit-font-smoothing: antialiased; font-kerning: normal; font-synthesis: none;
+  word-break: keep-all; overflow-wrap: break-word;
+}
+button, input { font: inherit; letter-spacing: inherit; word-break: inherit; color: inherit; }
+p { margin: 0; text-wrap: pretty; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; }
+.text-small { font-size: var(--text-small); line-height: 1.5; color: var(--color-text-muted); }
+.visually-hidden { position: absolute !important; inline-size: 1px; block-size: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.screen {
+  box-sizing: border-box; inline-size: 100%;
+  padding-inline: var(--space-3); padding-block: 0 var(--space-8);
+}
+.screen > :where(:not(.topbar)) { max-inline-size: 1180px; margin-inline: auto; }
+.topbar { padding-inline: max(var(--space-3), calc((100% - 1180px) / 2)) !important; }
+.screen:focus { outline: none; }
+@keyframes rise { from { opacity: 0.2; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+.screen:not([hidden]) .rise { animation: rise 900ms var(--ease) both; }
+.screen:not([hidden]) .rise-2 { animation-delay: 90ms; }
+.screen:not([hidden]) .rise-3 { animation-delay: 180ms; }
+
+/* ── 버튼 ─────────────────────── */
+.button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-block-size: 52px; padding-inline: 28px; border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+  font-size: 18px; font-weight: 600; line-height: 1.2; white-space: nowrap; cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease), background-color var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease);
+}
+.button:hover:not(:disabled) { border-color: var(--color-text); background: var(--color-surface); }
+.button:active:not(:disabled) { transform: var(--press); }
+.button--primary { background: var(--color-brand); border-color: var(--color-text); }
+.button--primary:hover:not(:disabled) { background: color-mix(in srgb, var(--color-brand) 88%, #000); }
+.button--big { min-block-size: 60px; padding-inline: 36px; font-size: 20px; }
+.button--small { min-block-size: 40px; padding-inline: 18px; font-size: var(--text-small); }
+.button:disabled { opacity: 0.4; cursor: not-allowed; }
+.button-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.kbd { display: inline-block; padding: 0 7px; border: 1px solid currentColor; border-radius: 6px; font-size: var(--text-small); font-weight: 600; line-height: 1.45; white-space: nowrap; }
+.link-button { border: 0; background: none; padding: 6px 2px; font-size: var(--text-small); font-weight: 600; color: var(--color-text-muted); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link-button:hover { color: var(--color-text); }
+
+/* ── 위 막대 ─────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  margin-inline: calc(-1 * var(--space-3)); margin-block-end: var(--space-4);
+  padding: 10px var(--space-3); min-block-size: 44px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2);
+  background: var(--color-glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--color-hairline);
+}
+.topbar-info { display: flex; flex-wrap: wrap; align-items: center; column-gap: 10px; font-size: var(--text-small); font-weight: 500; color: var(--color-text-muted); min-width: 0; }
+.topbar-item { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.topbar-item strong { color: var(--color-text); font-weight: 700; }
+.topbar-actions { display: flex; align-items: center; gap: var(--space-1); }
+.home-link { color: var(--color-text); font-weight: 700; letter-spacing: -0.02em; text-decoration: none; white-space: nowrap; padding-inline-end: 6px; }
+.home-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dot { color: var(--color-text-muted); }
+.sound-btn { display: inline-grid; place-items: center; inline-size: 40px; block-size: 40px; padding: 0; border-radius: 50%; border: 1px solid var(--color-border); background: var(--color-bg); cursor: pointer; transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease); }
+.sound-btn:hover { border-color: var(--color-text); }
+.sound-btn:active { transform: var(--press); }
+.sound-btn svg { inline-size: 20px; block-size: 20px; }
+.sound-btn .s-off { display: none; }
+.sound-btn[aria-pressed="false"] .s-on { display: none; }
+.sound-btn[aria-pressed="false"] .s-off { display: block; }
+.time-left { font-size: 20px; font-weight: 800; color: var(--color-text); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.time-left.is-low { color: var(--color-error); }
+
+/* ── 게임 목록 화면 ─────────────────── */
+.hero { display: grid; justify-items: center; gap: 12px; text-align: center; padding-block: var(--space-6) var(--space-4); }
+.hero h1 { font-size: var(--text-hero); font-weight: 800; line-height: 1.05; letter-spacing: -0.045em; }
+.hero-accent { background: linear-gradient(transparent 62%, var(--color-brand) 62%, var(--color-brand) 92%, transparent 92%); padding-inline: 0.04em; }
+.hero p { font-size: var(--text-lede); line-height: 1.45; color: var(--color-text-muted); font-weight: 500; letter-spacing: -0.02em; }
+.hero-cast { display: flex; gap: 6px; align-items: flex-end; block-size: 76px; margin-block-end: 4px; }
+.hero-cast .ch-svg { inline-size: 54px; block-size: 61px; }
+.hero-cast > :nth-child(2) .ch-svg { inline-size: 64px; block-size: 72px; }
+.hero-cast > span { cursor: pointer; }
+.hero-cast > span .ch-svg { transform-origin: 50% 100%; }
+.hero-cast > span.is-jump .ch-svg { animation: ch-jump 620ms var(--ease-out); }
+
+.game-card-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+@media (max-width: 860px) { .game-card-list { grid-template-columns: minmax(0, 1fr); } }
+.game-card {
+  position: relative; display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px;
+  min-block-size: 280px; padding: 28px; border: 0; border-radius: var(--radius-tile);
+  background: var(--color-ink); color: var(--color-on-ink); text-align: start; cursor: pointer; overflow: hidden;
+  transition: transform var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-out);
+}
+.game-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -24px rgba(29, 29, 31, 0.55); }
+.game-card:active { transform: translateY(-2px) scale(0.985); transition-duration: var(--dur-fast); }
+.game-card:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 4px; }
+.game-card-name { font-size: 28px; font-weight: 800; line-height: 1.2; letter-spacing: -0.03em; }
+.game-card-desc { color: var(--color-on-ink-muted); }
+.game-card-art { align-self: end; block-size: 78px; position: relative; }
+.game-card-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--space-1); font-size: var(--text-small); color: var(--color-on-ink-muted); }
+.game-card-meta .start { font-weight: 700; color: var(--color-brand); }
+.game-card-best { font-size: var(--text-small); color: var(--color-on-ink); font-variant-numeric: tabular-nums; }
+/* 카드 그림 */
+.art-track { position: absolute; inset-inline: 0; inset-block-end: 10px; block-size: 2px; background: repeating-linear-gradient(90deg, var(--color-on-ink-muted) 0 10px, transparent 10px 18px); }
+.art-flag { position: absolute; inset-inline-end: 0; inset-block-end: 10px; inline-size: 18px; block-size: 34px; }
+.art-word { position: absolute; padding: 2px 10px; border-radius: var(--radius-pill); background: var(--color-bg); color: var(--color-text); font-size: var(--text-small); font-weight: 700; white-space: nowrap; }
+.art-timer { position: absolute; inset-inline-end: 0; inset-block-end: 0; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.05em; color: var(--color-brand); font-variant-numeric: tabular-nums; }
+.game-card-art .ch-svg { filter: drop-shadow(0 0 1.2px rgba(245, 245, 247, 0.95)); }
+.game-card-art .ch-svg { position: absolute; inset-block-end: 6px; inline-size: 48px; block-size: 54px; }
+.home-note { margin-block-start: var(--space-3); text-align: center; }
+
+/* ── 팝업 ─────────────────────── */
+.scrim {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: var(--space-2);
+  background: var(--color-scrim); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  transition: opacity var(--dur-base) var(--ease), visibility 0s;
+}
+.scrim[hidden] { display: grid !important; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), visibility 0s var(--dur-fast); }
+.dialog {
+  box-sizing: border-box; inline-size: 100%; max-inline-size: 460px; max-block-size: calc(100vh - 32px);
+  display: grid; gap: var(--space-3); padding: var(--space-4);
+  background: var(--color-bg); border-radius: var(--radius-tile); box-shadow: 0 40px 80px -30px rgba(29, 29, 31, 0.6);
+  transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-base) var(--ease);
+}
+.scrim[hidden] .dialog { transform: translateY(12px) scale(0.97); opacity: 0; transition-duration: var(--dur-fast); }
+.dialog--wide { max-inline-size: 780px; grid-template-rows: auto minmax(0, 1fr) auto; }
+.dialog-head h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; margin-block-end: 4px; }
+.dialog-body { overflow-y: auto; display: grid; gap: var(--space-4); margin-inline: -6px; padding: 2px 6px; align-content: start; }
+.dialog-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); padding-block-start: var(--space-2); border-top: 1px solid var(--color-hairline); }
+.dialog-foot .status-line { flex: 1 1 200px; }
+.dialog-message { font-size: 22px; font-weight: 700; line-height: 1.4; letter-spacing: -0.02em; }
+.field { display: grid; gap: 10px; }
+.field-label { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+.field-label .text-small { font-weight: 500; }
+.text-input {
+  box-sizing: border-box; inline-size: 100%; min-block-size: 52px; padding: 0 18px;
+  border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface);
+  font-size: 18px; font-weight: 600;
+  transition: border-color var(--dur-base) var(--ease), background-color var(--dur-base) var(--ease);
+}
+.text-input:hover { border-color: var(--color-text-muted); }
+.text-input:focus { outline: none; border-color: var(--color-focus); background: var(--color-bg); }
+.text-input[aria-invalid="true"] { border-color: var(--color-error); }
+.text-input--code { text-transform: uppercase; letter-spacing: 0.2em; font-size: 24px; font-weight: 800; text-align: center; }
+
+.choice-list { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.choice {
+  display: inline-flex; align-items: center; gap: 6px; min-block-size: 44px; padding-inline: 16px;
+  border-radius: var(--radius-pill); border: 1px solid var(--color-border); background: var(--color-bg);
+  font-size: var(--text-body); font-weight: 600; line-height: 1.2; white-space: nowrap; cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease), background-color var(--dur-base) var(--ease);
+}
+.choice:hover { border-color: var(--color-text); }
+.choice:active { transform: var(--press); }
+.choice[aria-checked="true"] { background: var(--color-brand); border-color: var(--color-text); }
+.choice-sub { color: var(--color-text-muted); font-weight: 500; }
+.choice[aria-checked="true"] .choice-sub { color: var(--color-text); }
+.choice-count { color: var(--color-text-muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.choice[aria-checked="true"] .choice-count { color: var(--color-text); }
+.choice-check { font-weight: 800; }
+
+.room-type-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-1); }
+@media (max-width: 600px) { .room-type-list { grid-template-columns: minmax(0, 1fr); } }
+.room-type {
+  display: grid; gap: 4px; padding: 16px 18px; text-align: start; cursor: pointer;
+  border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-bg);
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease), background-color var(--dur-base) var(--ease);
+}
+.room-type:hover { border-color: var(--color-text); }
+.room-type:active { transform: var(--press); }
+.room-type[aria-checked="true"] { background: var(--color-brand); border-color: var(--color-text); }
+.room-type-name { font-size: 18px; font-weight: 700; }
+.room-type-desc { font-size: var(--text-small); color: var(--color-text-muted); line-height: 1.45; }
+.room-type[aria-checked="true"] .room-type-desc { color: var(--color-text); }
+
+.topic-group { display: grid; gap: 10px; }
+.topic-group + .topic-group { margin-block-start: var(--space-2); }
+.topic-group-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.topic-group-head h3 { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+
+.multi-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-2); }
+@media (max-width: 600px) { .multi-options { grid-template-columns: minmax(0, 1fr); } }
+.multi-option { display: grid; gap: 12px; align-content: start; padding: var(--space-3); border-radius: var(--radius-card); background: var(--color-surface); }
+.multi-option h3 { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+.local-note { padding: 12px 16px; border-radius: var(--radius-control); background: var(--color-surface); font-size: var(--text-small); color: var(--color-text-muted); }
+
+.status-line { font-size: var(--text-small); line-height: 1.5; min-block-size: 1.5em; color: var(--color-text-muted); }
+.status-line--error { color: var(--color-error); font-weight: 600; }
+.status-line--strong { color: var(--color-text); font-weight: 700; }
+
+/* ── 캐릭터 ─────────────────────── */
+.ch-svg { display: block; overflow: visible; }
+.ch-svg .ch-fill { fill: var(--ch, var(--ch-1)); stroke: var(--color-ink); stroke-width: 3; stroke-linejoin: round; }
+.ch-svg .ch-ink { fill: var(--color-ink); }
+.ch-svg .ch-line { fill: none; stroke: var(--color-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ch-svg .ch-shine { fill: #fff; opacity: 0.5; }
+.ch-svg .ch-cheek { fill: #fff; opacity: 0.35; }
+.ch-svg .ch-tear { fill: var(--tear); stroke: var(--color-ink); stroke-width: 2; }
+.ch-svg .ch-arm, .ch-svg .ch-foot, .ch-svg .ch-body-g { transform-box: fill-box; }
+.ch-svg .ch-arm-l { transform-origin: 80% 15%; }
+.ch-svg .ch-arm-r { transform-origin: 20% 15%; }
+.ch-svg .ch-foot { transform-origin: 50% 0%; }
+.ch-svg .ch-body-g { transform-origin: 50% 100%; }
+.ch-svg .f-happy, .ch-svg .f-sad, .ch-svg .f-wow, .ch-svg .ch-tear { display: none; }
+.is-happy .ch-svg .f-normal, .is-sad .ch-svg .f-normal, .is-wow .ch-svg .f-normal { display: none; }
+.is-happy .ch-svg .f-happy { display: inline; }
+.is-sad .ch-svg .f-sad, .is-sad .ch-svg .ch-tear { display: inline; }
+.is-wow .ch-svg .f-wow { display: inline; }
+
+@keyframes ch-idle { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.97) translateY(1px); } }
+@keyframes ch-jump {
+  0% { transform: translateY(0) scale(1, 1); }
+  18% { transform: translateY(2px) scale(1.12, 0.86); }
+  45% { transform: translateY(-30px) scale(0.94, 1.08); }
+  75% { transform: translateY(0) scale(1.08, 0.92); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes ch-wave { 0%, 100% { transform: rotate(-150deg); } 50% { transform: rotate(-110deg); } }
+@keyframes ch-wave-l { 0%, 100% { transform: rotate(150deg); } 50% { transform: rotate(110deg); } }
+@keyframes ch-step-l { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(-12deg); } }
+@keyframes ch-step-r { 0%, 100% { transform: translateY(-4px) rotate(12deg); } 50% { transform: translateY(0) rotate(0); } }
+@keyframes ch-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes ch-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+.avatar { --ch: var(--ch-1); position: relative; display: grid; justify-items: center; inline-size: 96px; }
+.avatar-fig { position: relative; inline-size: 64px; block-size: 72px; cursor: pointer; }
+.avatar-fig .ch-svg { inline-size: 100%; block-size: 100%; }
+.avatar-motion { inline-size: 100%; block-size: 100%; transform-origin: 50% 100%; }
+.avatar-flip { inline-size: 100%; block-size: 100%; transition: transform var(--dur-base) var(--ease); }
+.avatar.is-left .avatar-flip { transform: scaleX(-1); }
+.avatar .ch-body-g { animation: ch-idle 2.6s ease-in-out infinite; }
+.avatar.is-jump .avatar-motion { animation: ch-jump 620ms var(--ease-out); }
+.avatar.is-wave .ch-arm-r { animation: ch-wave 360ms ease-in-out 3; }
+.avatar.is-walk .ch-foot-l { animation: ch-step-l 360ms ease-in-out infinite; }
+.avatar.is-walk .ch-foot-r { animation: ch-step-r 360ms ease-in-out infinite; }
+.avatar.is-walk .avatar-motion { animation: ch-bounce 360ms ease-in-out infinite; }
+.avatar.is-shake .avatar-motion { animation: ch-shake 300ms ease-in-out; }
+.avatar-name {
+  margin-block-start: 2px; max-inline-size: 120px; padding: 0 8px; border-radius: var(--radius-pill);
+  font-size: var(--text-small); font-weight: 700; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: var(--color-glass);
+}
+.avatar.is-me .avatar-name { background: var(--color-ink); color: var(--color-on-ink); }
+.avatar-tag { display: block; margin-block-start: 2px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--color-brand); border: 1px solid var(--color-ink); font-size: var(--text-small); font-weight: 700; line-height: 1.35; white-space: nowrap; }
+.avatar-pop { position: absolute; inset-block-end: calc(100% - 8px); inset-inline-start: 50%; transform: translateX(-50%); display: grid; justify-items: center; gap: 4px; pointer-events: none; z-index: 3; }
+.bubble {
+  position: relative; inline-size: max-content; max-inline-size: 220px; padding: 8px 14px;
+  border: 2px solid var(--color-ink); border-radius: 16px; background: var(--color-bg);
+  font-size: var(--text-small); font-weight: 600; line-height: 1.4; text-align: center; word-break: break-all;
+  animation: pop-in var(--dur-base) var(--ease-out) both;
+}
+.bubble::after { content: ""; position: absolute; inset-block-start: 100%; inset-inline-start: 50%; inline-size: 12px; block-size: 12px; background: var(--color-bg); border: 2px solid var(--color-ink); border-top: 0; border-left: 0; transform: translate(-50%, -6px) rotate(45deg); }
+.bubble.is-out { animation: pop-out var(--dur-base) var(--ease) both; }
+.emoji-float { inline-size: 44px; block-size: 44px; animation: emoji-float 1800ms var(--ease-out) both; }
+@keyframes pop-in { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes pop-out { to { opacity: 0; transform: translateY(-6px) scale(0.96); } }
+@keyframes emoji-float { 0% { opacity: 0; transform: translateY(10px) scale(0.6); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 25% { transform: scale(1); } 80% { opacity: 1; transform: translateY(-16px); } 100% { opacity: 0; transform: translateY(-26px); } }
+.emoji-svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
+
+.mini-avatar { --ch: var(--ch-1); display: inline-block; inline-size: 32px; block-size: 36px; flex: none; }
+.mini-avatar .ch-svg { inline-size: 100%; block-size: 100%; }
+
+/* ── 대기실 ─────────────────────── */
+.lobby { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--space-3); align-items: start; }
+@media (max-width: 980px) { .lobby { grid-template-columns: minmax(0, 1fr); } }
+.room-code { display: inline-flex; align-items: center; gap: 8px; }
+.room-code strong { font-size: 20px; letter-spacing: 0.14em; color: var(--color-text); }
+.stage {
+  position: relative; block-size: 560px; border-radius: var(--radius-tile); overflow: hidden;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(29, 29, 31, 0.10) 1.2px, transparent 1.6px) 0 0 / 28px 28px,
+    var(--color-surface);
+  cursor: default;
+}
+.stage-floor { position: absolute; inset-inline: 0; inset-block-end: 0; block-size: 92px; background: rgba(29, 29, 31, 0.05); border-top: 1px solid var(--color-hairline); }
+.stage .avatar { position: absolute; transform: translate(-50%, -100%); transition: left 110ms linear, top 110ms linear; }
+.stage .avatar.is-me { z-index: 2; }
+.stage-help { position: absolute; inset-block-start: 16px; inset-inline-start: 20px; font-size: var(--text-small); color: var(--color-text-muted); font-weight: 500; pointer-events: none; }
+.chat-bar { position: absolute; inset-inline: 16px; inset-block-end: 16px; display: flex; align-items: center; gap: 12px; z-index: 4; }
+.chat-input { flex: 1; min-block-size: 56px; padding: 0 20px; border-radius: var(--radius-pill); border: 1px solid var(--color-border); background: var(--color-bg); font-size: 18px; font-weight: 600; }
+.chat-input::placeholder { color: var(--color-quiet); font-weight: 500; }
+.chat-input:focus { outline: none; border-color: var(--color-focus); box-shadow: 0 12px 32px -18px rgba(29, 29, 31, 0.45); }
+.chat-count { font-size: var(--text-small); color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; min-inline-size: 5.5em; text-align: end; }
+
+.side { display: grid; gap: var(--space-2); }
+.side-card { display: grid; gap: 12px; padding: var(--space-3); border-radius: var(--radius-card); background: var(--color-surface); }
+.side-card h2 { font-size: 18px; display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-1); }
+.side-card h2 .text-small { font-weight: 600; }
+.room-game-name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.player-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.player-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding-block: 8px; border-top: 1px solid var(--color-hairline); }
+.player-row:first-child { border-top: 0; padding-block-start: 0; }
+.player-name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-name .text-small { font-weight: 500; }
+.badge { display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-pill); font-size: var(--text-small); font-weight: 700; line-height: 1.5; white-space: nowrap; border: 1px solid var(--color-text); }
+.badge--host { background: var(--color-ink); color: var(--color-on-ink); border-color: var(--color-ink); }
+.badge--ready { background: var(--color-brand); }
+.badge--wait { border-style: dashed; border-color: var(--color-border); color: var(--color-text-muted); }
+.row-actions { flex-basis: 100%; display: flex; gap: 6px; padding-inline-start: 42px; }
+.mini-btn { min-block-size: 34px; padding: 0 12px; border-radius: var(--radius-pill); border: 1px solid var(--color-border); background: var(--color-bg); font-size: var(--text-small); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.mini-btn:hover { border-color: var(--color-text); }
+.swatch-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.swatch { position: relative; aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--color-ink); background: var(--sw); cursor: pointer; padding: 0; transition: transform var(--dur-fast) var(--ease-out); }
+.swatch:hover:not(:disabled) { transform: scale(1.08); }
+.swatch[aria-checked="true"] { box-shadow: 0 0 0 3px var(--color-bg), 0 0 0 5px var(--color-ink); }
+.swatch:disabled { cursor: not-allowed; opacity: 0.35; border-style: dashed; }
+.swatch:disabled::after { content: ""; position: absolute; inset: 45% 10%; background: var(--color-ink); transform: rotate(-45deg); border-radius: 2px; }
+.emoji-list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.emoji-btn { aspect-ratio: 1; padding: 6px; border-radius: 14px; border: 1px solid var(--color-hairline); background: var(--color-bg); cursor: pointer; transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease); }
+.emoji-btn:hover { border-color: var(--color-text); transform: translateY(-2px); }
+.emoji-btn:active { transform: var(--press); }
+.lobby-main-action { display: grid; gap: 8px; }
+.lobby-main-action .button { inline-size: 100%; }
+.lobby-main-action .status-line { text-align: center; }
+
+/* ── 플레이 공통 ─────────────────── */
+.play { display: grid; gap: var(--space-3); }
+.play-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-3); align-items: start; }
+@media (max-width: 980px) { .play-layout { grid-template-columns: minmax(0, 1fr); } }
+.term-show { display: grid; justify-items: center; gap: 10px; text-align: center; min-block-size: 150px; align-content: center; }
+.term-text { font-size: var(--text-term); font-weight: 700; line-height: 1.1; letter-spacing: -0.035em; }
+.term-text .word { white-space: nowrap; }
+.char { color: #8E8A84; transition: color 100ms linear; }
+.char.is-ok { color: var(--color-text); }
+.char.is-cur { box-shadow: inset 0 -5px 0 var(--color-text); }
+.char.is-bad { color: var(--color-error); text-decoration: underline; text-decoration-thickness: 4px; text-underline-offset: 0.1em; }
+.term-ko { font-size: 21px; font-weight: 600; color: var(--color-text-muted); min-block-size: 1.5em; }
+.term-next { font-size: var(--text-small); color: var(--color-quiet); min-block-size: 1.5em; }
+.typing-field { display: grid; gap: 10px; inline-size: 100%; max-inline-size: 720px; margin-inline: auto; }
+.typing-input {
+  box-sizing: border-box; inline-size: 100%; min-block-size: 72px; padding: 0 var(--space-3);
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-control);
+  font-size: var(--text-input); font-weight: 600; letter-spacing: -0.02em; text-align: center;
+  transition: background-color var(--dur-base) var(--ease), border-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
+}
+.typing-input:focus { outline: none; background: var(--color-bg); border-color: var(--color-focus); box-shadow: 0 12px 32px -18px rgba(29, 29, 31, 0.45); }
+.typing-input[aria-invalid="true"] { border-color: var(--color-error); color: var(--color-error); }
+.typing-input.is-shake { animation: ch-shake 260ms ease-in-out; }
+.typing-input:disabled { opacity: 0.5; }
+.typing-field .status-line { text-align: center; }
+.lang-hint { justify-self: center; display: inline-flex; align-items: center; gap: 10px; font-size: var(--text-small); color: var(--color-text-muted); }
+.lang-key { display: inline-grid; place-items: center; inline-size: 30px; block-size: 30px; border-radius: 8px; background: var(--color-ink); color: var(--color-on-ink); font-weight: 700; font-size: 16px; }
+.lang-hint.is-ko { color: var(--color-error); font-weight: 700; }
+.lang-hint.is-ko .lang-key { background: var(--color-brand); color: var(--color-text); outline: 1px solid var(--color-text); outline-offset: -1px; }
+.stat-row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-4); font-size: var(--text-small); color: var(--color-text-muted); font-weight: 500; }
+.stat-row strong { color: var(--color-text); font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; margin-inline-start: 6px; }
+.combo-pop { display: inline-block; animation: pop-in var(--dur-base) var(--ease-out); }
+
+.board { display: grid; gap: 4px; padding: var(--space-3); border-radius: var(--radius-card); background: var(--color-surface); }
+.board h2 { font-size: 18px; margin-block-end: 6px; }
+.board-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 14px; transition: background-color var(--dur-base) var(--ease); }
+.board-row.is-me { background: var(--color-bg); box-shadow: inset 0 0 0 1px var(--color-hairline); }
+.board-rank { inline-size: 1.6em; font-weight: 800; font-variant-numeric: tabular-nums; }
+.board-name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-name .text-small { display: block; font-weight: 500; line-height: 1.3; }
+.board-val { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* 카운트다운 */
+.countdown { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; align-content: center; gap: var(--space-2); background: rgba(255, 255, 255, 0.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); text-align: center; }
+.countdown-num { font-size: clamp(120px, 18vw, 220px); font-weight: 800; line-height: 1; letter-spacing: -0.06em; }
+.countdown-num.is-tick { animation: pop-in 300ms var(--ease-out); }
+.countdown-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
+.countdown .lang-hint { font-size: 18px; }
+
+/* 레이스 */
+.track { display: grid; gap: 6px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-tile); background: var(--color-surface); }
+.lane { --lane-h: 82px; display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: end; gap: var(--space-2); block-size: var(--lane-h); }
+.track.is-many .lane { --lane-h: 60px; }
+.lane + .lane { border-top: 1px solid var(--color-hairline); }
+.lane-name { align-self: center; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lane-name .text-small { display: block; font-weight: 500; line-height: 1.3; }
+.lane.is-me .lane-name { text-decoration: underline; text-decoration-thickness: 3px; text-decoration-color: var(--color-brand); text-underline-offset: 4px; }
+.lane-road { position: relative; block-size: 100%; }
+.lane-road::before { content: ""; position: absolute; inset-inline: 0; inset-block-end: 6px; block-size: 2px; background: repeating-linear-gradient(90deg, var(--color-border) 0 10px, transparent 10px 18px); opacity: 0.6; }
+.lane-finish { position: absolute; inset-inline-end: 0; inset-block: 4px 6px; inline-size: 10px; background: repeating-conic-gradient(var(--color-ink) 0 25%, var(--color-bg) 0 50%) 0 0 / 10px 10px; border-radius: 2px; }
+.lane-runner { position: absolute; inset-block-end: 6px; inline-size: 52px; block-size: 58px; transform: translateX(-50%); transition: left 420ms var(--ease-out); }
+.track.is-many .lane-runner { inline-size: 40px; block-size: 45px; }
+.lane-runner .avatar { inline-size: 100%; }
+.lane-runner .avatar-fig { inline-size: 100%; block-size: 100%; }
+.lane-place { position: absolute; inset-inline-end: 18px; inset-block-start: 4px; font-weight: 800; font-size: var(--text-small); }
+.grace-note { text-align: center; font-weight: 700; color: var(--color-error); min-block-size: 1.5em; }
+
+/* 떨어지는 용어 */
+.arena { position: relative; block-size: 520px; border-radius: var(--radius-tile); overflow: hidden; background: var(--color-surface); }
+.arena.is-hit-ground { animation: ground-flash 420ms var(--ease); }
+@keyframes ground-flash { 30% { box-shadow: inset 0 -60px 60px -40px rgba(196, 43, 28, 0.45); } }
+.arena-ground { position: absolute; inset-inline: 0; inset-block-end: 0; block-size: 70px; background: rgba(29, 29, 31, 0.05); border-top: 2px dashed var(--color-border); }
+.arena .avatar { position: absolute; inset-block-end: 4px; inset-inline-start: 24px; inline-size: 72px; }
+.arena .avatar-fig { inline-size: 52px; block-size: 58px; }
+.fword {
+  position: absolute; inset-block-start: 0; inset-inline-start: 0; padding: 6px 16px; border-radius: var(--radius-pill);
+  background: var(--color-bg); border: 1px solid var(--color-border); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap;
+  will-change: transform; box-shadow: 0 8px 20px -14px rgba(29, 29, 31, 0.5);
+}
+.fword .m { color: var(--color-text); background: var(--color-brand); border-radius: 4px; }
+.fword .r { color: #6F6A63; }
+.fword.is-target { border-color: var(--color-ink); border-width: 2px; }
+.fword.is-low { border-color: var(--color-error); }
+.fword.is-hit { animation: word-hit 360ms var(--ease-out) forwards; }
+.fword.is-miss { animation: word-miss 420ms var(--ease) forwards; background: #FBE9E7; }
+@keyframes word-hit { to { opacity: 0; scale: 1.25; } }
+@keyframes word-miss { to { opacity: 0; translate: 0 20px; } }
+.score-float { position: absolute; font-weight: 800; font-size: 22px; pointer-events: none; animation: score-up 800ms var(--ease-out) forwards; }
+@keyframes score-up { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 -40px; } }
+.lives { display: inline-flex; gap: 4px; vertical-align: middle; margin-inline-start: 6px; }
+.heart { inline-size: 24px; block-size: 24px; }
+.heart path { fill: var(--color-error); stroke: var(--color-ink); stroke-width: 2; }
+.heart.is-lost path { fill: none; stroke: var(--color-border); stroke-dasharray: 3 3; }
+.out-note { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 8px; background: rgba(255, 255, 255, 0.85); text-align: center; z-index: 5; }
+.out-note strong { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
+
+/* 60초 */
+.sixty-stage { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-3); border-radius: var(--radius-tile); background: var(--color-surface); }
+.sixty-stage .avatar { inline-size: 96px; }
+.sixty-big { font-size: var(--text-display); font-weight: 800; line-height: 0.95; letter-spacing: -0.06em; text-align: center; font-variant-numeric: tabular-nums; }
+.sixty-big.is-low { color: var(--color-error); }
+
+/* ── 결과 ─────────────────────── */
+.result { display: grid; gap: var(--space-6); padding-block-start: var(--space-4); }
+.result-hero { display: grid; justify-items: center; text-align: center; gap: var(--space-2); }
+.result-hero h1 { font-size: var(--text-title); font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; }
+.result-hero .avatar { inline-size: 110px; }
+.result-hero .avatar-fig { inline-size: 80px; block-size: 90px; }
+.result-big { font-size: var(--text-display); font-weight: 800; line-height: 0.95; letter-spacing: -0.06em; font-variant-numeric: tabular-nums; }
+.result-unit { font-size: var(--text-stat); font-weight: 700; margin-inline-start: 10px; letter-spacing: -0.02em; }
+.new-record { display: inline-flex; padding: 4px 16px; border-radius: var(--radius-pill); background: var(--color-brand); border: 1px solid var(--color-text); font-weight: 800; animation: pop-in var(--dur-slow) var(--ease-out); }
+.result-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-2); }
+@media (max-width: 820px) { .result-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat-tile { display: grid; gap: 6px; padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-tile); }
+.stat-label { font-size: var(--text-small); color: var(--color-text-muted); font-weight: 600; }
+.stat-value { font-size: var(--text-stat); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.rank-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.rank-list .board-row { padding: 10px 14px; }
+.result-section { display: grid; gap: var(--space-2); }
+.missed-list { list-style: none; margin: 0; padding: var(--space-3); display: grid; border-radius: var(--radius-tile); background: var(--color-surface); }
+.missed-list li { padding-block: 12px; border-top: 1px solid var(--color-hairline); font-size: 18px; }
+.missed-list li:first-child { border-top: 0; padding-block-start: 0; }
+.missed-list li:last-child { padding-block-end: 0; }
+.missed-en { font-weight: 700; }
+.result-actions { justify-content: center; }
+
+/* 알림 */
+.toast-area { position: fixed; inset-block-end: 24px; inset-inline: 0; z-index: 40; display: grid; justify-items: center; gap: 8px; pointer-events: none; }
+.toast { padding: 12px 22px; border-radius: var(--radius-pill); background: var(--color-ink); color: var(--color-on-ink); font-weight: 600; box-shadow: 0 14px 30px -14px rgba(29, 29, 31, 0.6); animation: fade-up var(--dur-base) var(--ease-out) both; }
+.toast.is-out { animation: pop-out var(--dur-base) var(--ease) both; }
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.loading { padding-block: var(--space-8); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .screen .rise, .avatar .ch-body-g, .avatar.is-walk .avatar-motion, .avatar.is-walk .ch-foot-l, .avatar.is-walk .ch-foot-r { animation: none !important; }
+  .game-card, .button, .choice, .room-type, .scrim, .scrim .dialog, .lane-runner, .stage .avatar { transition: none; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 게임 목록 -->
+  <section class="screen" id="scr-home" aria-labelledby="home-title">
+    <div class="topbar">
+      <div class="topbar-info"><a class="home-link" href="./" lang="en">Lingo Loop</a><span class="dot" aria-hidden="true">·</span><span class="topbar-item">타자 게임</span></div>
+      <div class="topbar-actions"><button class="sound-btn" type="button" data-sound aria-pressed="true" aria-label="효과음"></button></div>
+    </div>
+    <div class="hero rise">
+      <div class="hero-cast" id="hero-cast" aria-hidden="true"></div>
+      <h1 id="home-title">타자 <span class="hero-accent">게임</span></h1>
+      <p>배운 용어를 빠르게 치고, 컴퓨터나 친구와 겨뤄요.</p>
+    </div>
+    <p class="status-line status-line--error" id="load-error" hidden></p>
+    <div class="game-card-list rise rise-2" id="game-cards">
+      <button class="game-card" type="button" data-game="race">
+        <span class="game-card-name">용어 레이스</span>
+        <span class="game-card-desc">같은 용어 15개 코스를 치면서 캐릭터가 달려요. 먼저 완주하면 이겨요.</span>
+        <span class="game-card-art" data-art="race"></span>
+        <span class="game-card-meta"><span class="game-card-best" data-best="race"></span><span class="start">게임 시작</span></span>
+      </button>
+      <button class="game-card" type="button" data-game="falling">
+        <span class="game-card-name">떨어지는 용어 생존</span>
+        <span class="game-card-desc">바닥에 닿기 전에 쳐요. 갈수록 빨라지고, 목숨은 3개예요.</span>
+        <span class="game-card-art" data-art="falling"></span>
+        <span class="game-card-meta"><span class="game-card-best" data-best="falling"></span><span class="start">게임 시작</span></span>
+      </button>
+      <button class="game-card" type="button" data-game="sixty">
+        <span class="game-card-name">60초 점수 도전</span>
+        <span class="game-card-desc">60초 동안 최대한 많이 맞혀요. 틀리지 않고 이어 치면 점수가 커져요.</span>
+        <span class="game-card-art" data-art="sixty"></span>
+        <span class="game-card-meta"><span class="game-card-best" data-best="sixty"></span><span class="start">게임 시작</span></span>
+      </button>
+    </div>
+    <p class="text-small home-note">게임에는 영어 용어만 나와요 · 대소문자, 띄어쓰기, 하이픈은 달라도 맞아요 · 최고 기록은 이 브라우저에만 남아요</p>
+  </section>
+
+  <!-- 대기실 -->
+  <section class="screen" id="scr-lobby" hidden aria-label="대기실">
+    <div class="topbar">
+      <div class="topbar-info">
+        <a class="home-link" href="./" lang="en">Lingo Loop</a><span class="dot" aria-hidden="true">·</span>
+        <span class="topbar-item room-code">방 코드 <strong id="lb-code" lang="en"></strong></span>
+        <button class="button button--small" type="button" id="lb-copy">방 코드 복사</button>
+        <span class="topbar-item">인원 <strong id="lb-count">1/8</strong></span>
+      </div>
+      <div class="topbar-actions">
+        <button class="sound-btn" type="button" data-sound aria-pressed="true" aria-label="효과음"></button>
+        <button class="button button--small" type="button" id="lb-leave">방 나가기</button>
+      </div>
+    </div>
+    <div class="lobby">
+      <div class="stage" id="stage">
+        <p class="stage-help">화살표 키로 걸어요 · 캐릭터를 눌러 보세요</p>
+        <div class="stage-floor" aria-hidden="true"></div>
+        <div id="stage-people"></div>
+        <div class="chat-bar">
+          <label class="visually-hidden" for="chat-input">채팅</label>
+          <input class="chat-input" id="chat-input" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="글자를 치면 채팅이 시작돼요 · Enter로 보내기">
+          <span class="chat-count" id="chat-count" aria-live="polite">60자 남음</span>
+        </div>
+      </div>
+      <div class="side">
+        <div class="side-card">
+          <h2>게임 <button class="link-button" type="button" id="lb-change" hidden>게임·주제 바꾸기</button></h2>
+          <p class="room-game-name" id="lb-game"></p>
+          <p class="text-small" id="lb-topic"></p>
+        </div>
+        <div class="side-card">
+          <h2>사람 <span class="text-small" id="lb-count2"></span></h2>
+          <ul class="player-list" id="lb-players"></ul>
+        </div>
+        <div class="side-card">
+          <h2>내 색</h2>
+          <div class="swatch-list" id="lb-colors" role="radiogroup" aria-label="캐릭터 색"></div>
+        </div>
+        <div class="side-card">
+          <h2>반응</h2>
+          <div class="emoji-list" id="lb-emojis"></div>
+        </div>
+        <div class="lobby-main-action">
+          <button class="button button--primary button--big" type="button" id="lb-main">준비 완료</button>
+          <p class="status-line" id="lb-status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 플레이 -->
+  <section class="screen" id="scr-play" hidden aria-label="게임">
+    <div class="topbar">
+      <div class="topbar-info">
+        <span class="topbar-item"><strong id="pl-game"></strong></span><span class="dot" aria-hidden="true">·</span>
+        <span class="topbar-item" id="pl-mode"></span><span class="dot" aria-hidden="true">·</span>
+        <span class="topbar-item" id="pl-topic"></span>
+      </div>
+      <div class="topbar-actions">
+        <span class="time-left" id="pl-time" aria-label="남은 시간">3:00</span>
+        <button class="sound-btn" type="button" data-sound aria-pressed="true" aria-label="효과음"></button>
+        <button class="button button--small" type="button" id="pl-quit">나가기</button>
+      </div>
+    </div>
+    <div class="play" id="play-body"></div>
+    <div class="typing-field" id="typing-field">
+      <p class="lang-hint" id="lang-hint"><span class="lang-key" id="lang-key" aria-hidden="true">A</span><span id="lang-text">영어로 쳐요</span></p>
+      <input class="typing-input" id="play-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" lang="en" aria-label="용어 입력" aria-describedby="play-status">
+      <p class="status-line" id="play-status" aria-live="polite"></p>
+      <div class="stat-row" id="play-stats"></div>
+    </div>
+  </section>
+
+  <!-- 결과 -->
+  <section class="screen" id="scr-result" hidden aria-labelledby="rs-title" tabindex="-1">
+    <div class="topbar">
+      <div class="topbar-info"><a class="home-link" href="./" lang="en">Lingo Loop</a><span class="dot" aria-hidden="true">·</span><span class="topbar-item" id="rs-info"></span></div>
+      <div class="topbar-actions"><button class="sound-btn" type="button" data-sound aria-pressed="true" aria-label="효과음"></button></div>
+    </div>
+    <div class="result">
+      <div class="result-hero rise">
+        <div id="rs-avatar"></div>
+        <h1 id="rs-title">결과</h1>
+        <div><span class="result-big" id="rs-big">0</span><span class="result-unit" id="rs-unit">점</span></div>
+        <p class="text-small" id="rs-best"></p>
+        <span class="new-record" id="rs-new" hidden>새 기록!</span>
+      </div>
+      <div class="result-stats rise rise-2" id="rs-stats"></div>
+      <section class="result-section rise rise-3" id="rs-rank-sec" aria-labelledby="rs-rank-title">
+        <h2 id="rs-rank-title">순위</h2>
+        <ol class="rank-list" id="rs-rank"></ol>
+      </section>
+      <section class="result-section rise rise-3" aria-labelledby="rs-miss-title">
+        <h2 id="rs-miss-title">놓친 용어</h2>
+        <ul class="missed-list" id="rs-missed"></ul>
+      </section>
+      <div class="button-row result-actions">
+        <button class="button button--primary button--big" type="button" id="rs-again">다시 하기 <kbd class="kbd">Enter</kbd></button>
+        <button class="button" type="button" id="rs-home">게임 목록</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 방 만들기 팝업 (대기실에서 게임·주제 바꾸기에도 씀) -->
+  <div class="scrim" id="dlg-room" hidden>
+    <div class="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="room-title">
+      <div class="dialog-head">
+        <h2 id="room-title">방 만들기</h2>
+        <p class="text-small" id="room-sub">게임, 방 종류, 주제를 골라요</p>
+      </div>
+      <div class="dialog-body">
+        <div class="field" id="f-name">
+          <label class="field-label" for="room-name">닉네임 <span class="text-small">12자까지 · 캐릭터 아래에 보여요</span></label>
+          <input class="text-input" id="room-name" type="text" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="예: 숨">
+        </div>
+        <div class="field">
+          <span class="field-label" id="room-game-label">게임</span>
+          <div class="choice-list" id="room-games" role="radiogroup" aria-labelledby="room-game-label"></div>
+        </div>
+        <div class="field" id="f-type">
+          <span class="field-label" id="room-type-label">방 종류</span>
+          <div class="room-type-list" id="room-types" role="radiogroup" aria-labelledby="room-type-label"></div>
+          <div class="choice-list" id="room-bots" role="radiogroup" aria-label="컴퓨터 수" hidden></div>
+        </div>
+        <div class="field">
+          <span class="field-label">용어 주제 <span class="text-small">여러 개를 함께 고를 수 있어요</span></span>
+          <div id="room-topics"></div>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <p class="status-line" id="room-status" aria-live="polite"></p>
+        <div class="button-row">
+          <button class="button" type="button" id="room-cancel">취소</button>
+          <button class="button button--primary" type="button" id="room-next">다음</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 멀티: 방 만들기 / 코드로 참가 -->
+  <div class="scrim" id="dlg-multi" hidden>
+    <div class="dialog dialog--wide" role="dialog" aria-modal="true" aria-labelledby="multi-title" style="grid-template-rows: auto auto auto;">
+      <div class="dialog-head">
+        <h2 id="multi-title">멀티 대전</h2>
+        <p class="text-small">최대 8명까지 함께해요</p>
+      </div>
+      <div class="dialog-body">
+        <p class="local-note" id="multi-local" hidden>지금은 온라인 서버(Firebase)에 연결하기 전이라, 같은 브라우저의 다른 탭끼리만 함께할 수 있어요.</p>
+        <div class="multi-options">
+          <div class="multi-option">
+            <h3>방 만들기</h3>
+            <p class="text-small">방 코드가 자동으로 생겨요. 친구에게 코드를 알려 주세요.</p>
+            <button class="button button--primary" type="button" id="multi-create">방 만들기</button>
+          </div>
+          <div class="multi-option">
+            <h3>방 코드로 참가</h3>
+            <label class="visually-hidden" for="multi-code">방 코드</label>
+            <input class="text-input text-input--code" id="multi-code" type="text" maxlength="5" autocomplete="off" spellcheck="false" placeholder="ABCDE" lang="en">
+            <button class="button" type="button" id="multi-join">참가하기</button>
+          </div>
+        </div>
+        <p class="status-line" id="multi-status" aria-live="polite"></p>
+      </div>
+      <div class="dialog-foot">
+        <span></span>
+        <button class="button" type="button" id="multi-back">뒤로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 확인 창 -->
+  <div class="scrim" id="dlg-confirm" hidden>
+    <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-text">
+      <p class="dialog-message" id="confirm-text"></p>
+      <div class="button-row">
+        <button class="button button--primary" type="button" id="confirm-no">계속하기</button>
+        <button class="button" type="button" id="confirm-yes">나가기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="countdown" id="countdown" hidden>
+    <p class="countdown-title" id="cd-title"></p>
+    <p class="countdown-num" id="cd-num">3</p>
+    <p class="lang-hint"><span class="lang-key" aria-hidden="true">A</span><span>영어로 쳐요. 한/영 키로 영문 입력인지 확인하세요</span></p>
+  </div>
+  <div class="toast-area" id="toasts" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Firebase 설정 ─────────────────────────────
+  // 숨님이 Firebase 콘솔에서 받은 웹 앱 설정(firebaseConfig)을 여기에 넣으면 멀티 대전이 온라인으로 돌아가요.
+  // 비어 있으면 같은 브라우저의 탭끼리만 함께하는 시험 모드로 돌아가요.
+  var FIREBASE_CONFIG = null;
+  var FIREBASE_VERSION = "10.12.2";
+
+  // ── 규칙 값 (scope/game-v1-scope.md의 첫 값) ──
+  var GAMES = {
+    race: { name: "용어 레이스", unit: "" },
+    falling: { name: "떨어지는 용어 생존", unit: "점" },
+    sixty: { name: "60초 점수 도전", unit: "점" }
+  };
+  var GAME_ORDER = ["race", "falling", "sixty"];
+  var ROOM_TYPES = {
+    solo: { name: "혼자", desc: "내 기록에 도전해요" },
+    bot: { name: "컴퓨터와 대전", desc: "컴퓨터 캐릭터와 겨뤄요" },
+    multi: { name: "멀티 대전", desc: "방 코드로 최대 8명이 함께해요" }
+  };
+  var COLORS = [
+    { id: 1, name: "노랑" }, { id: 2, name: "귤" }, { id: 3, name: "산호" }, { id: 4, name: "분홍" },
+    { id: 5, name: "자두" }, { id: 6, name: "보라" }, { id: 7, name: "파랑" }, { id: 8, name: "하늘" },
+    { id: 9, name: "청록" }, { id: 10, name: "연두" }, { id: 11, name: "초록" }, { id: 12, name: "갈색" }
+  ];
+  var EMOJIS = [
+    { id: "thumbs", name: "좋아요" }, { id: "laugh", name: "웃겨요" }, { id: "wow", name: "놀라워요" },
+    { id: "fire", name: "불타요" }, { id: "cry", name: "슬퍼요" }, { id: "wave", name: "안녕" }
+  ];
+  var BOT_WPM = { 1: [35], 4: [25, 30, 40, 50] };
+  var RACE_LEN = 15, MAX_MS = 180000, SIXTY_MS = 60000, RACE_GRACE = 30000, LIVES = 3;
+  var MAX_PLAYERS = 8, CHAT_MAX = 60, NAME_MAX = 12, COUNTDOWN_MS = 3600;
+  var CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  // ── 브라우저 저장 (닉네임, 색, 소리, 최고 기록) ──
+  var STORE_KEY = "lingoloop-game-v1";
+  var store = (function () {
+    var d = {};
+    try { d = JSON.parse(localStorage.getItem(STORE_KEY) || "{}") || {}; } catch (e) { d = {}; }
+    return d;
+  })();
+  function saveStore() { try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) {} }
+  var settings = Object.assign({ name: "", color: 1, sound: true, game: "race", roomType: "solo", bots: 1, cats: [] }, store.settings || {});
+  var best = store.best || {};
+  function saveSettings() { store.settings = settings; store.best = best; saveStore(); }
+
+  // ── 정답 비교: 연습과 같은 규칙 (대소문자·띄어쓰기·하이픈·가운뎃점·슬래시·따옴표·점 무시) ──
+  function norm(s) { return s.normalize("NFC").trim().toLowerCase().replace(/[\s\-\u2010-\u2015·\u00B7\u30FB\/'’.]/g, ""); }
+  var RE_HANGUL = /[ᄀ-ᇿ㄰-㆏가-힣]/;
+
+  // ── 욕설 가리기 (목록 방식이라 변형된 말은 빠질 수 있음) ──
+  var BAD_WORDS = ["씨발", "시발", "씨바", "ㅅㅂ", "ㅆㅂ", "ㅅ ㅂ", "병신", "븅신", "ㅂㅅ", "개새끼", "개새기", "개색기", "개색끼", "새끼", "좆", "존나", "졸라", "ㅈㄴ", "지랄", "ㅈㄹ", "미친놈", "미친년", "닥쳐", "꺼져", "썅", "니미", "느금", "니애미", "애미", "애비", "등신", "염병", "엿먹어", "fuck", "shit", "bitch", "asshole", "bastard", "cunt", "dick", "motherfucker", "wtf"];
+  var BAD_RE = new RegExp(BAD_WORDS.map(function (w) { return w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s*"); }).join("|"), "gi");
+  function cleanText(s) {
+    return String(s || "").normalize("NFC").replace(/[\u0000-\u001F\u007F]/g, "").replace(BAD_RE, "***");
+  }
+
+  // ── 시드가 있는 난수 (같은 방은 같은 용어 순서) ──
+  function rng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffleWith(a, r) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function randInt() { return Math.floor(Math.random() * 2147483647); }
+  function comboMult(c) { return Math.min(2, 1 + 0.1 * Math.floor(c / 5)); }
+  function fmtTime(ms) { var s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+  function fmtRace(ms) { var t = Math.max(0, ms) / 1000; var m = Math.floor(t / 60); var s = (t - m * 60).toFixed(1); return m + ":" + (s < 10 ? "0" : "") + s; }
+  function fmtNum(n) { return Math.round(n).toLocaleString("ko-KR"); }
+  function colorVar(id) { return "var(--ch-" + (id >= 1 && id <= 12 ? id : 1) + ")"; }
+
+  // ── 용어 데이터 ───────────────────────────────
+  var DATA = null;
+  function loadData() {
+    return fetch("terms.json", { cache: "no-cache" }).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }).then(function (raw) {
+      if (!raw || !Array.isArray(raw.categories) || !Array.isArray(raw.terms)) throw new Error("format");
+      var catIds = {};
+      raw.categories.forEach(function (c) { catIds[c.id] = true; if (!c.domain) c.domain = "ux"; });
+      var seen = {};
+      var terms = raw.terms.filter(function (t) {
+        if (typeof t.id !== "number" || seen[t.id]) return false;
+        if (typeof t.en !== "string" || !/^[A-Za-z0-9 '\-\/]{1,60}$/.test(t.en)) return false;
+        if (!catIds[t.categoryId]) return false;
+        seen[t.id] = true; return true;
+      }).map(function (t) {
+        return { id: t.id, en: t.en, ko: Array.isArray(t.ko) ? t.ko.map(function (k) { return String(k).normalize("NFC"); }) : [], categoryId: t.categoryId };
+      });
+      if (!terms.length) throw new Error("empty");
+      var cats = raw.categories.slice().sort(function (a, b) { return a.order - b.order; });
+      var doms = (Array.isArray(raw.domains) && raw.domains.length ? raw.domains : [{ id: "ux", name: "UX/UI", order: 1 }]).slice().sort(function (a, b) { return a.order - b.order; });
+      DATA = { domains: doms, categories: cats, terms: terms };
+      settings.cats = (settings.cats || []).filter(function (id) { return catIds[id]; });
+    });
+  }
+  function catsOf(dom) { return DATA.categories.filter(function (c) { return c.domain === dom; }); }
+  function termsFor(cats) { return DATA.terms.filter(function (t) { return cats.indexOf(t.categoryId) >= 0; }); }
+  function topicLabel(cats) {
+    var labels = [];
+    DATA.domains.forEach(function (d) {
+      var cs = catsOf(d.id), on = cs.filter(function (c) { return cats.indexOf(c.id) >= 0; });
+      if (!on.length) return;
+      if (on.length === cs.length) labels.push(d.name);
+      else on.forEach(function (c) { labels.push(c.name); });
+    });
+    if (labels.length <= 2) return labels.join(", ");
+    return labels[0] + " 외 " + (labels.length - 1) + "개";
+  }
+
+  // ── 코스 만들기 (게임별, 시드로 같은 순서) ──
+  function termSeq(cats, seed, n) {
+    var r = rng(seed);
+    var pool = termsFor(cats).slice().sort(function (a, b) { return a.id - b.id; });
+    var out = [];
+    while (out.length < n && pool.length) {
+      var round = shuffleWith(pool.slice(), r);
+      if (out.length && round[0].id === out[out.length - 1].id && round.length > 1) round.push(round.shift());
+      out = out.concat(round);
+    }
+    return { list: out.slice(0, n), r: r };
+  }
+  function makeCourse(game, cats, seed) {
+    if (game === "race") return { terms: termSeq(cats, seed, RACE_LEN).list };
+    if (game === "sixty") return { terms: termSeq(cats, seed, 400).list };
+    // 떨어지는 용어: 나오는 때, 가로 위치, 떨어지는 시간을 미리 정함. 갈수록 자주, 빠르게
+    var s = termSeq(cats, seed, 400), r = s.r, list = [], t = 800;
+    for (var i = 0; i < s.list.length && t < MAX_MS; i++) {
+      var sec = t / 1000, term = s.list[i];
+      var fall = Math.max(4200, 10500 - sec * 34) + term.en.length * 140;
+      list.push({ i: i, term: term, at: Math.round(t), fall: Math.round(fall), x: r() });
+      t += Math.max(1300, 4000 - sec * 16) * (0.8 + r() * 0.4);
+    }
+    return { drops: list };
+  }
+
+  // ── 컴퓨터 캐릭터 흉내 (시작할 때 한 판 전체를 미리 계산) ──
+  function botTermMs(len, wpm, r) { return len / (wpm * 5 / 60) * 1000 * (0.85 + r() * 0.35) + 240; }
+  function simBot(game, course, wpm, seed) {
+    var r = rng(seed), ev = [], t = 0, err = 0, chars = 0, combo = 0, maxCombo = 0, score = 0, correct = 0;
+    if (game === "race") {
+      var d = 0;
+      course.terms.forEach(function (term) {
+        var ms = botTermMs(term.en.length, wpm, r);
+        if (r() < 0.07) { ms += 700; err++; combo = 0; } else { combo++; }
+        maxCombo = Math.max(maxCombo, combo);
+        t += ms; d += term.en.length; correct++;
+        ev.push({ at: t, dist: d, correct: correct, combo: combo });
+      });
+      chars = d;
+      return { ev: ev, doneAt: t, acc: chars / (chars + err * 2), maxCombo: maxCombo };
+    }
+    if (game === "sixty") {
+      for (var i = 0; i < course.terms.length; i++) {
+        var term = course.terms[i], ms2 = botTermMs(term.en.length, wpm, r), wrong = r() < 0.07;
+        t += ms2 + (wrong ? 500 : 0);
+        if (t > SIXTY_MS) break;
+        if (wrong) { combo = 0; err++; }
+        else { combo++; correct++; chars += term.en.length; score += Math.round(term.en.length * 10 * comboMult(combo)); }
+        maxCombo = Math.max(maxCombo, combo);
+        ev.push({ at: t, score: score, combo: combo, correct: correct });
+      }
+      return { ev: ev, acc: chars / (chars + err * 2 || 1), maxCombo: maxCombo };
+    }
+    // 떨어지는 용어: 순서대로 치다가, 바닥 전에 못 끝낼 용어는 놓침
+    var free = 0, raw = [];
+    course.drops.forEach(function (w) {
+      var ground = w.at + w.fall, start = Math.max(w.at + 350, free);
+      var ms3 = botTermMs(w.term.en.length, wpm, r), wrong3 = r() < 0.06;
+      if (wrong3) ms3 += 600;
+      var fin = start + ms3;
+      if (fin <= ground) {
+        free = fin;
+        raw.push({ at: fin, hit: true, len: w.term.en.length, prog: (fin - w.at) / w.fall, wrong: wrong3 });
+      } else {
+        raw.push({ at: ground, hit: false });
+      }
+    });
+    raw.sort(function (a, b) { return a.at - b.at; });
+    var lives = LIVES, deadAt = null;
+    for (var k = 0; k < raw.length; k++) {
+      var e = raw[k];
+      if (e.at > MAX_MS) break;
+      if (e.hit) {
+        if (e.wrong) { combo = 0; err++; }
+        combo++; correct++; chars += e.len; maxCombo = Math.max(maxCombo, combo);
+        score += Math.round(e.len * 10 * comboMult(combo) * (1 + 0.5 * (1 - e.prog)));
+      } else { lives--; combo = 0; }
+      ev.push({ at: e.at, score: score, lives: lives, combo: combo, correct: correct });
+      if (lives <= 0) { deadAt = e.at; break; }
+    }
+    return { ev: ev, deadAt: deadAt, acc: chars / (chars + err * 2 || 1), maxCombo: maxCombo };
+  }
+  function botState(b, at) {
+    var last = null;
+    for (var i = 0; i < b.sim.ev.length && b.sim.ev[i].at <= at; i++) last = b.sim.ev[i];
+    return last;
+  }
+
+  // ── 효과음 (Web Audio로 직접 만듦, 배경음악 없음) ──
+  var Sound = {
+    ctx: null,
+    unlock: function () {
+      if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { this.ctx = null; } }
+      if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+    },
+    tone: function (freq, start, dur, type, vol, toFreq) {
+      var c = this.ctx, t0 = c.currentTime + start;
+      var o = c.createOscillator(), g = c.createGain();
+      o.type = type || "triangle"; o.frequency.setValueAtTime(freq, t0);
+      if (toFreq) o.frequency.exponentialRampToValueAtTime(toFreq, t0 + dur);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(c.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+    },
+    play: function (name) {
+      if (!settings.sound) return;
+      this.unlock();
+      if (!this.ctx) return;
+      try {
+        if (name === "tick") this.tone(660, 0, 0.12, "square", 0.06);
+        else if (name === "go") { this.tone(880, 0, 0.1, "square", 0.07); this.tone(1320, 0.08, 0.22, "square", 0.07); }
+        else if (name === "correct") { this.tone(988, 0, 0.07, "triangle", 0.12); this.tone(1480, 0.05, 0.1, "triangle", 0.1); }
+        else if (name === "wrong") this.tone(196, 0, 0.18, "sawtooth", 0.06, 150);
+        else if (name === "miss") this.tone(520, 0, 0.32, "triangle", 0.14, 180);
+        else if (name === "end") [523, 659, 784, 1047].forEach(function (f, i) { Sound.tone(f, i * 0.1, 0.22, "triangle", 0.12); });
+        else if (name === "pop") this.tone(1200, 0, 0.06, "sine", 0.1, 1600);
+        else if (name === "join") { this.tone(660, 0, 0.08, "sine", 0.1); this.tone(990, 0.07, 0.12, "sine", 0.1); }
+      } catch (e) {}
+    }
+  };
+  var SOUND_ON = '<svg class="s-on" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5h3l4-3.5v12l-4-3.5H3z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 7a4 4 0 0 1 0 6M15.8 4.8a7 7 0 0 1 0 10.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  var SOUND_OFF = '<svg class="s-off" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5h3l4-3.5v12l-4-3.5H3z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13.5 7.5l4 5M17.5 7.5l-4 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  function renderSoundButtons() {
+    document.querySelectorAll("[data-sound]").forEach(function (b) {
+      if (!b.innerHTML) b.innerHTML = SOUND_ON + SOUND_OFF;
+      b.setAttribute("aria-pressed", settings.sound ? "true" : "false");
+      b.setAttribute("aria-label", settings.sound ? "효과음 켜짐" : "효과음 꺼짐");
+      b.title = settings.sound ? "효과음 끄기" : "효과음 켜기";
+    });
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-sound]");
+    if (!b) return;
+    settings.sound = !settings.sound; saveSettings(); renderSoundButtons();
+    if (settings.sound) Sound.play("pop");
+    refocusAfterClick(e);
+  });
+  document.addEventListener("pointerdown", function () { Sound.unlock(); }, { capture: true });
+  document.addEventListener("keydown", function () { Sound.unlock(); }, { capture: true });
+
+  // ── 캐릭터 그림 (모두 같은 모양, 몸 색만 바뀜) ──
+  function charSVG() {
+    return '<svg class="ch-svg" viewBox="0 0 64 72" aria-hidden="true" focusable="false">' +
+      '<ellipse cx="32" cy="69" rx="17" ry="2.6" fill="rgba(29,29,31,0.12)"/>' +
+      '<g class="ch-foot ch-foot-l"><ellipse class="ch-fill" cx="23" cy="63" rx="7" ry="4.6"/></g>' +
+      '<g class="ch-foot ch-foot-r"><ellipse class="ch-fill" cx="41" cy="63" rx="7" ry="4.6"/></g>' +
+      '<g class="ch-body-g">' +
+        '<g class="ch-arm ch-arm-l"><ellipse class="ch-fill" cx="8.5" cy="40" rx="4.6" ry="7.4"/></g>' +
+        '<g class="ch-arm ch-arm-r"><ellipse class="ch-fill" cx="55.5" cy="40" rx="4.6" ry="7.4"/></g>' +
+        '<path class="ch-fill" d="M32 7C49 7 57 19 57 36c0 16-10 25.5-25 25.5S7 52 7 36C7 19 15 7 32 7z"/>' +
+        '<ellipse class="ch-shine" cx="22" cy="17.5" rx="6.5" ry="3.4" transform="rotate(-20 22 17.5)"/>' +
+        '<ellipse class="ch-cheek" cx="16.5" cy="40.5" rx="3.8" ry="2.4"/><ellipse class="ch-cheek" cx="47.5" cy="40.5" rx="3.8" ry="2.4"/>' +
+        '<g class="f-normal"><ellipse class="ch-ink" cx="24.5" cy="32" rx="3" ry="4"/><ellipse class="ch-ink" cx="39.5" cy="32" rx="3" ry="4"/><path class="ch-line" d="M28.5 41.5q3.5 3 7 0"/></g>' +
+        '<g class="f-happy"><path class="ch-line" d="M20.5 33q4-5.5 8 0M35.5 33q4-5.5 8 0"/><path class="ch-ink" d="M26.5 39.5h11q-.5 7-5.5 7t-5.5-7z"/></g>' +
+        '<g class="f-sad"><path class="ch-line" d="M20.5 30.5q4 3 8 0M35.5 30.5q4 3 8 0"/><path class="ch-line" d="M28 44q4-4 8 0"/></g>' +
+        '<g class="f-wow"><circle class="ch-ink" cx="24.5" cy="31.5" r="3.6"/><circle class="ch-ink" cx="39.5" cy="31.5" r="3.6"/><ellipse class="ch-ink" cx="32" cy="43" rx="3.4" ry="4.2"/></g>' +
+        '<path class="ch-tear" d="M20 35.5q-2.6 4.2 0 5.6q2.6-1.4 0-5.6z"/>' +
+      '</g></svg>';
+  }
+  function makeAvatar(p, opts) {
+    opts = opts || {};
+    var a = el("div", "avatar" + (p.isMe ? " is-me" : ""));
+    a.style.setProperty("--ch", colorVar(p.color));
+    a.dataset.uid = p.id;
+    var pop = el("div", "avatar-pop");
+    var fig = el("div", "avatar-fig");
+    fig.innerHTML = '<div class="avatar-motion"><div class="avatar-flip">' + charSVG() + "</div></div>";
+    a.appendChild(pop); a.appendChild(fig);
+    if (!opts.noName) {
+      var nm = el("div", "avatar-name", p.name || "");
+      a.appendChild(nm);
+    }
+    return a;
+  }
+  function miniAvatar(color) {
+    var s = el("span", "mini-avatar");
+    s.style.setProperty("--ch", colorVar(color));
+    s.innerHTML = charSVG();
+    return s;
+  }
+  // 상태 하나를 잠깐 켰다가 끔 (점프, 인사, 표정)
+  function pulse(a, cls, ms) {
+    if (!a) return;
+    a.classList.remove(cls);
+    void a.offsetWidth;
+    a.classList.add(cls);
+    clearTimeout(a["_t_" + cls]);
+    a["_t_" + cls] = setTimeout(function () { a.classList.remove(cls); }, ms);
+  }
+  function face(a, cls, ms) {
+    if (!a) return;
+    ["is-happy", "is-sad", "is-wow"].forEach(function (c) { if (c !== cls) a.classList.remove(c); });
+    pulse(a, cls, ms || 900);
+  }
+
+  // ── 이모지 6종 (디자인 시스템 선 굵기·색으로 새로 그림) ──
+  var INK = "#1D1D1F";
+  var FACE = '<circle cx="24" cy="25" r="19" fill="#F2C230" stroke="' + INK + '" stroke-width="2.6"/>';
+  var EMOJI_SVG = {
+    thumbs: '<rect x="6" y="22" width="8" height="20" rx="2.5" fill="#5F5850" stroke="' + INK + '" stroke-width="2.6"/>' +
+      '<path d="M14 23.5h5.5l5-11.5c1.1-2.6 6.5-2.6 6.5 1.6V21h7.4c2.9 0 4.8 2.7 4.1 5.4l-2.9 11.8c-.5 2.1-2.1 3.3-4.3 3.3H14z" fill="#F2C230" stroke="' + INK + '" stroke-width="2.6" stroke-linejoin="round"/>' +
+      '<path d="M30.5 28h9M30 34h8" fill="none" stroke="' + INK + '" stroke-width="2.2" stroke-linecap="round"/>',
+    laugh: FACE + '<path d="M13 21.5q4-5 8 0M27 21.5q4-5 8 0" fill="none" stroke="' + INK + '" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<path d="M13.5 28h21q-1 11-10.5 11T13.5 28z" fill="' + INK + '"/><path d="M19 35.5q5-3.5 10 0q-2 3-5 3t-5-3z" fill="#EA6B55"/>' +
+      '<path d="M6.5 24q-4 6 0 8q4-2 0-8zM41.5 24q-4 6 0 8q4-2 0-8z" fill="#7CC6E6" stroke="' + INK + '" stroke-width="2"/>',
+    wow: FACE + '<path d="M13.5 15.5q3.5-2.5 7 0M27.5 15.5q3.5-2.5 7 0" fill="none" stroke="' + INK + '" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<circle cx="17" cy="22" r="2.8" fill="' + INK + '"/><circle cx="31" cy="22" r="2.8" fill="' + INK + '"/><ellipse cx="24" cy="33" rx="4.6" ry="5.6" fill="' + INK + '"/>',
+    fire: '<path d="M24 4c6 8.5 15 13 15 25.5C39 38.6 32.5 45 24 45S9 38.6 9 29.5C9 22 13 17.5 16.5 13.5c1 5 3 7 5.5 7C21 14.5 21 9 24 4z" fill="#F0913C" stroke="' + INK + '" stroke-width="2.6" stroke-linejoin="round"/>' +
+      '<path d="M24 22.5c3.2 4.2 8 7 8 12.2 0 4.6-3.4 7.3-8 7.3s-8-2.7-8-7.3c0-4.4 4.5-6.6 8-12.2z" fill="#F2C230" stroke="' + INK + '" stroke-width="2.2" stroke-linejoin="round"/>',
+    cry: FACE + '<path d="M13 21q4 3.5 8 0M27 21q4 3.5 8 0" fill="none" stroke="' + INK + '" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<path d="M14 24h6v15.5a3 3 0 0 1-6 0zM28 24h6v15.5a3 3 0 0 1-6 0z" fill="#7CC6E6" stroke="' + INK + '" stroke-width="2"/>' +
+      '<path d="M20 35.5q4-4.5 8 0q-4 1.6-8 0z" fill="' + INK + '" stroke="' + INK + '" stroke-width="2" stroke-linejoin="round"/>',
+    wave: '<g transform="rotate(-18 24 28)">' +
+      '<rect x="12.5" y="9" width="6" height="20" rx="3" fill="#F2C230" stroke="' + INK + '" stroke-width="2.4"/>' +
+      '<rect x="18.5" y="5.5" width="6" height="22" rx="3" fill="#F2C230" stroke="' + INK + '" stroke-width="2.4"/>' +
+      '<rect x="24.5" y="7" width="6" height="21" rx="3" fill="#F2C230" stroke="' + INK + '" stroke-width="2.4"/>' +
+      '<rect x="30.5" y="11" width="5.6" height="18" rx="2.8" fill="#F2C230" stroke="' + INK + '" stroke-width="2.4"/>' +
+      '<path d="M12.5 24h23.6v8c0 7-5 11.5-11.8 11.5S12.5 39 12.5 32z" fill="#F2C230" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/>' +
+      '<path d="M13 30q-6-6-8.5-3.5T11 37" fill="#F2C230" stroke="' + INK + '" stroke-width="2.4" stroke-linejoin="round"/></g>' +
+      '<path d="M39 6q4.5 3 5 8.5M42.5 2.5q6.5 4.5 6.5 12" fill="none" stroke="' + INK + '" stroke-width="2.2" stroke-linecap="round"/>'
+  };
+  function emojiSVG(id) { return '<svg class="emoji-svg" viewBox="0 0 48 48" aria-hidden="true" focusable="false">' + (EMOJI_SVG[id] || "") + "</svg>"; }
+
+  // ── 알림 ─────────────────────────────────────
+  function toast(text) {
+    var t = el("div", "toast", text);
+    $("toasts").appendChild(t);
+    setTimeout(function () { t.classList.add("is-out"); setTimeout(function () { t.remove(); }, 260); }, 2400);
+  }
+
+  // ── 실시간 연결 (Firebase, 또는 같은 브라우저 탭끼리 시험용) ──
+  // 두 방식 모두 같은 함수 모양: get, set, update, remove, push, on, onChild, tx, onDisc, cancelDisc, now, TS
+  var Net = null;
+  function makeLocalNet() {
+    var KEY = "lingoloop-game-localdb";
+    var uid = null;
+    try { uid = sessionStorage.getItem("ll-uid"); } catch (e) {}
+    if (!uid) { uid = "u" + Math.random().toString(36).slice(2, 10); try { sessionStorage.setItem("ll-uid", uid); } catch (e) {} }
+    var bc = null;
+    try { bc = new BroadcastChannel("lingoloop-game"); } catch (e) {}
+    var listeners = [], discs = [], pending = false;
+    function read() { try { return JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { return {}; } }
+    function parts(p) { return String(p).split("/").filter(Boolean); }
+    function getAt(tree, p) {
+      var ps = parts(p), n = tree;
+      for (var i = 0; i < ps.length; i++) { if (n == null || typeof n !== "object") return null; n = n[ps[i]]; }
+      return n === undefined ? null : n;
+    }
+    function resolve(v) {
+      if (v && typeof v === "object") {
+        if (v[".sv"]) return Date.now();
+        var o = Array.isArray(v) ? [] : {};
+        for (var k in v) if (v[k] !== null && v[k] !== undefined) o[k] = resolve(v[k]);
+        return o;
+      }
+      return v;
+    }
+    function setAt(tree, p, v) {
+      var ps = parts(p);
+      if (!ps.length) return v == null ? {} : v;
+      var n = tree, chain = [];
+      for (var i = 0; i < ps.length - 1; i++) {
+        if (typeof n[ps[i]] !== "object" || n[ps[i]] === null) n[ps[i]] = {};
+        chain.push([n, ps[i]]); n = n[ps[i]];
+      }
+      if (v == null) delete n[ps[ps.length - 1]]; else n[ps[ps.length - 1]] = v;
+      for (var j = chain.length - 1; j >= 0; j--) {
+        var parent = chain[j][0], key = chain[j][1];
+        if (parent[key] && typeof parent[key] === "object" && !Object.keys(parent[key]).length) delete parent[key];
+      }
+      return tree;
+    }
+    function save(tree) {
+      try { localStorage.setItem(KEY, JSON.stringify(tree)); } catch (e) {}
+      if (bc) bc.postMessage(1);
+      schedule();
+    }
+    function schedule() { if (pending) return; pending = true; setTimeout(fireAll, 0); }
+    function fireAll() {
+      pending = false;
+      var tree = read();
+      listeners.slice().forEach(function (l) { fire(l, tree); });
+    }
+    function fire(l, tree) {
+      if (l.dead) return;
+      var v = getAt(tree, l.p);
+      if (l.child) {
+        if (v && typeof v === "object") Object.keys(v).forEach(function (k) { if (!l.seen[k]) { l.seen[k] = 1; l.cb(k, v[k]); } });
+        return;
+      }
+      var s = JSON.stringify(v);
+      if (s !== l.last) { l.last = s; l.cb(v == null ? null : JSON.parse(s)); }
+    }
+    if (bc) bc.onmessage = schedule;
+    window.addEventListener("storage", function (e) { if (e.key === KEY) schedule(); });
+    window.addEventListener("pagehide", function () {
+      if (!discs.length) return;
+      var tree = read();
+      discs.forEach(function (p) { setAt(tree, p, null); });
+      try { localStorage.setItem(KEY, JSON.stringify(tree)); } catch (e) {}
+      if (bc) bc.postMessage(1);
+    });
+    function sub(l) { listeners.push(l); setTimeout(function () { fire(l, read()); }, 0); return function () { l.dead = true; listeners.splice(listeners.indexOf(l), 1); }; }
+    return {
+      mode: "local", uid: uid, TS: { ".sv": "timestamp" },
+      now: function () { return Date.now(); },
+      get: function (p) { return Promise.resolve(JSON.parse(JSON.stringify(getAt(read(), p)))); },
+      set: function (p, v) { var t = read(); save(setAt(t, p, resolve(v))); return Promise.resolve(); },
+      update: function (p, o) { var t = read(); Object.keys(o).forEach(function (k) { t = setAt(t, p + "/" + k, resolve(o[k])); }); save(t); return Promise.resolve(); },
+      remove: function (p) { var t = read(); save(setAt(t, p, null)); return Promise.resolve(); },
+      push: function (p, v) { var k = Date.now().toString(36) + Math.random().toString(36).slice(2, 6); var t = read(); save(setAt(t, p + "/" + k, resolve(v))); return k; },
+      on: function (p, cb) { return sub({ p: p, cb: cb, last: undefined }); },
+      onChild: function (p, cb) { return sub({ p: p, cb: cb, child: true, seen: {} }); },
+      tx: function (p, fn) {
+        var t = read(), cur = getAt(t, p);
+        var nv = fn(cur == null ? null : JSON.parse(JSON.stringify(cur)));
+        if (nv === undefined) return Promise.resolve({ committed: false, value: cur });
+        save(setAt(t, p, resolve(nv)));
+        return Promise.resolve({ committed: true, value: nv });
+      },
+      onDisc: function (p) { if (discs.indexOf(p) < 0) discs.push(p); return Promise.resolve(); },
+      cancelDisc: function (p) { var i = discs.indexOf(p); if (i >= 0) discs.splice(i, 1); return Promise.resolve(); }
+    };
+  }
+  function makeFirebaseNet(cfg) {
+    var base = "https://www.gstatic.com/firebasejs/" + FIREBASE_VERSION + "/";
+    return Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-database.js")]).then(function (m) {
+      var A = m[0], Au = m[1], D = m[2];
+      var app = A.initializeApp(cfg);
+      var auth = Au.getAuth(app);
+      return Au.signInAnonymously(auth).then(function (cred) {
+        var db = D.getDatabase(app), offset = 0;
+        D.onValue(D.ref(db, ".info/serverTimeOffset"), function (s) { offset = s.val() || 0; });
+        var R = function (p) { return D.ref(db, p); };
+        return {
+          mode: "firebase", uid: cred.user.uid, TS: D.serverTimestamp(),
+          now: function () { return Date.now() + offset; },
+          get: function (p) { return D.get(R(p)).then(function (s) { return s.val(); }); },
+          set: function (p, v) { return D.set(R(p), v); },
+          update: function (p, o) { return D.update(R(p), o); },
+          remove: function (p) { return D.remove(R(p)); },
+          push: function (p, v) { var r = D.push(R(p)); D.set(r, v); return r.key; },
+          on: function (p, cb) { return D.onValue(R(p), function (s) { cb(s.val()); }); },
+          onChild: function (p, cb) { return D.onChildAdded(R(p), function (s) { cb(s.key, s.val()); }); },
+          tx: function (p, fn) { return D.runTransaction(R(p), fn).then(function (r) { return { committed: r.committed, value: r.snapshot.val() }; }); },
+          onDisc: function (p) { return D.onDisconnect(R(p)).remove(); },
+          cancelDisc: function (p) { return D.onDisconnect(R(p)).cancel(); }
+        };
+      });
+    });
+  }
+  var netPromise = null;
+  function getNet() {
+    if (Net) return Promise.resolve(Net);
+    if (!netPromise) {
+      netPromise = (FIREBASE_CONFIG ? makeFirebaseNet(FIREBASE_CONFIG) : Promise.resolve(makeLocalNet()))
+        .then(function (n) { Net = n; return n; })
+        .catch(function (e) { netPromise = null; throw e; });
+    }
+    return netPromise;
+  }
+
+  // ── 화면 전환 ─────────────────────────────────
+  var screen = "home";
+  var SCREENS = { home: "scr-home", lobby: "scr-lobby", play: "scr-play", result: "scr-result" };
+  function show(name) {
+    screen = name;
+    Object.keys(SCREENS).forEach(function (k) { $(SCREENS[k]).hidden = k !== name; });
+    document.title = (name === "lobby" ? "대기실" : name === "play" && G ? GAMES[G.game].name : name === "result" ? "결과" : "타자 게임") + " · Lingo Loop";
+    window.scrollTo(0, 0);
+  }
+  var openDialog = null;
+  function setDialog(id) {
+    ["dlg-room", "dlg-multi", "dlg-confirm"].forEach(function (d) { $(d).hidden = d !== id; });
+    openDialog = id;
+    Object.keys(SCREENS).forEach(function (k) { if (id) $(SCREENS[k]).setAttribute("inert", ""); else $(SCREENS[k]).removeAttribute("inert"); });
+  }
+  function trapTab(scrim, e) {
+    if (e.key !== "Tab") return;
+    var f = Array.prototype.slice.call(scrim.querySelectorAll("button:not(:disabled), input:not(:disabled)")).filter(function (x) { return x.offsetParent !== null; });
+    if (!f.length) return;
+    var i = f.indexOf(document.activeElement);
+    if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+  }
+  // 마우스로 누른 버튼 뒤에는 채팅 입력칸으로 초점을 돌려서, 바로 걷고 칠 수 있게
+  function refocusAfterClick(e) {
+    if (screen === "lobby" && e && e.detail > 0 && !openDialog) setTimeout(function () { $("chat-input").focus({ preventScroll: true }); }, 0);
+  }
+
+  // ── 게임 목록 화면 ─────────────────────────────
+  function bestText(game) {
+    var b = best[game];
+    if (b == null) return "최고 기록 없음";
+    return "최고 기록 " + (game === "race" ? fmtRace(b) : fmtNum(b) + "점");
+  }
+  function artChar(color, side, pos) {
+    var s = el("span"); s.innerHTML = charSVG();
+    var svg = s.firstChild; svg.style.setProperty("--ch", colorVar(color)); svg.style[side] = pos;
+    return svg;
+  }
+  function renderHome() {
+    var cast = $("hero-cast"); cast.innerHTML = "";
+    [settings.color, 7, 3].forEach(function (c, i) {
+      if (i && c === settings.color) c = i === 1 ? 9 : 6;
+      var w = el("span"); w.style.setProperty("--ch", colorVar(c)); w.innerHTML = charSVG();
+      if (i === 1) w.className = "is-happy";
+      cast.appendChild(w);
+    });
+    GAME_ORDER.forEach(function (g) { var b = document.querySelector('[data-best="' + g + '"]'); if (b) b.textContent = bestText(g); });
+    var race = document.querySelector('[data-art="race"]');
+    if (!race.childNodes.length) {
+      race.innerHTML = '<span class="art-track"></span><svg class="art-flag" viewBox="0 0 18 34" aria-hidden="true"><path d="M2 2v32" stroke="#F5F5F7" stroke-width="2"/><path d="M3 3h13l-3 5 3 5H3z" fill="#F2C230"/></svg>';
+      [[3, "12%"], [7, "38%"]].forEach(function (x) { race.appendChild(artChar(x[0], "left", x[1])); });
+      var fall = document.querySelector('[data-art="falling"]');
+      fall.innerHTML = '<span class="art-word" style="left:4%;top:0">Persona</span><span class="art-word" style="left:46%;top:26px">Wireframe</span>';
+      fall.appendChild(artChar(9, "right", "8%"));
+      var six = document.querySelector('[data-art="sixty"]');
+      six.innerHTML = '<span class="art-timer">60</span>';
+      six.appendChild(artChar(6, "left", "0"));
+    }
+  }
+  $("game-cards").addEventListener("click", function (e) {
+    var c = e.target.closest(".game-card");
+    if (!c || !DATA) return;
+    openRoomDialog("create", c.dataset.game);
+  });
+
+  // ── 방 만들기 팝업 ─────────────────────────────
+  var roomDraft = null; // { mode: "create"|"edit", game, roomType, bots, cats }
+  function openRoomDialog(mode, game) {
+    roomDraft = {
+      mode: mode,
+      game: game || settings.game,
+      roomType: settings.roomType,
+      bots: settings.bots,
+      cats: (mode === "edit" && Room.meta ? Room.meta.cats : settings.cats).slice()
+    };
+    if (mode === "edit") roomDraft.game = Room.meta.game;
+    $("room-title").textContent = mode === "edit" ? "게임·주제 바꾸기" : "방 만들기";
+    $("room-sub").textContent = mode === "edit" ? "바꾸면 모두의 준비 완료가 풀려요" : "게임, 방 종류, 주제를 골라요";
+    $("f-name").hidden = mode === "edit";
+    $("f-type").hidden = mode === "edit";
+    $("room-name").value = settings.name;
+    $("room-next").textContent = mode === "edit" ? "바꾸기" : "다음";
+    renderRoomDialog();
+    setDialog("dlg-room");
+    setTimeout(function () { (mode === "create" && !settings.name ? $("room-name") : $("room-next").disabled ? $("room-topics").querySelector(".choice") : $("room-next")).focus(); }, 30);
+  }
+  function radio(list, items, current, attr) {
+    list.innerHTML = "";
+    items.forEach(function (it) {
+      var b = el("button", it.cls || "choice");
+      b.type = "button"; b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(it.id) === String(current) ? "true" : "false");
+      b.tabIndex = String(it.id) === String(current) ? 0 : -1;
+      b.dataset[attr] = it.id;
+      b.innerHTML = it.html;
+      list.appendChild(b);
+    });
+    if (!list.querySelector('[aria-checked="true"]') && list.firstChild) list.firstChild.tabIndex = 0;
+  }
+  function renderRoomDialog() {
+    var d = roomDraft;
+    radio($("room-games"), GAME_ORDER.map(function (g) { return { id: g, html: GAMES[g].name }; }), d.game, "game");
+    radio($("room-types"), Object.keys(ROOM_TYPES).map(function (k) {
+      return { id: k, cls: "room-type", html: '<span class="room-type-name">' + ROOM_TYPES[k].name + '</span><span class="room-type-desc">' + ROOM_TYPES[k].desc + "</span>" };
+    }), d.roomType, "type");
+    $("room-bots").hidden = d.roomType !== "bot";
+    radio($("room-bots"), [
+      { id: 1, html: '1:1 <span class="choice-sub">컴퓨터 1명</span>' },
+      { id: 4, html: '1:4 <span class="choice-sub">컴퓨터 4명</span>' }
+    ], d.bots, "bots");
+    renderTopicChips();
+    validateRoom();
+  }
+  function renderTopicChips() {
+    var box = $("room-topics"), d = roomDraft;
+    var keep = document.activeElement && box.contains(document.activeElement) ? document.activeElement.dataset.key : null;
+    box.innerHTML = "";
+    DATA.domains.forEach(function (dm) {
+      var cs = catsOf(dm.id); if (!cs.length) return;
+      var allOn = cs.every(function (c) { return d.cats.indexOf(c.id) >= 0; });
+      var g = el("section", "topic-group");
+      var head = el("div", "topic-group-head");
+      var h = el("h3", null, dm.name); h.id = "rt-" + dm.id; head.appendChild(h);
+      var all = el("button", "link-button", allOn ? "모두 해제" : "모두 선택");
+      all.type = "button"; all.dataset.domain = dm.id; all.dataset.key = "all-" + dm.id;
+      all.setAttribute("aria-label", dm.name + " " + all.textContent);
+      head.appendChild(all); g.appendChild(head);
+      var list = el("div", "choice-list"); list.setAttribute("role", "group"); list.setAttribute("aria-labelledby", h.id);
+      cs.forEach(function (c) {
+        var n = DATA.terms.filter(function (t) { return t.categoryId === c.id; }).length;
+        var on = d.cats.indexOf(c.id) >= 0;
+        var b = el("button", "choice"); b.type = "button";
+        b.setAttribute("role", "checkbox"); b.setAttribute("aria-checked", on ? "true" : "false");
+        b.dataset.cat = c.id; b.dataset.key = "cat-" + c.id;
+        b.innerHTML = (on ? '<span class="choice-check" aria-hidden="true">✓</span>' : "") + c.name + ' <span class="choice-count">' + n + "</span>";
+        list.appendChild(b);
+      });
+      g.appendChild(list); box.appendChild(g);
+    });
+    if (keep) { var k = box.querySelector('[data-key="' + keep + '"]'); if (k) k.focus(); }
+  }
+  function validateRoom() {
+    var d = roomDraft, miss = [];
+    var name = cleanText($("room-name").value).trim();
+    if (d.mode === "create" && !name) miss.push("닉네임");
+    var n = termsFor(d.cats).length;
+    if (!n) miss.push("주제");
+    $("room-next").disabled = miss.length > 0;
+    var st = $("room-status");
+    if (miss.length) { st.className = "status-line"; st.textContent = miss.join(", ") + "을(를) 정해 주세요."; }
+    else { st.className = "status-line status-line--strong"; st.textContent = topicLabel(d.cats) + " · 용어 " + n + "개"; }
+  }
+  function radioKeys(list, attr, onPick) {
+    list.addEventListener("click", function (e) { var b = e.target.closest("[data-" + attr + "]"); if (b) onPick(b.dataset[attr]); });
+    list.addEventListener("keydown", function (e) {
+      if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].indexOf(e.key) < 0) return;
+      e.preventDefault();
+      var bs = Array.prototype.slice.call(list.querySelectorAll("[data-" + attr + "]"));
+      var i = bs.indexOf(document.activeElement); if (i < 0) i = 0;
+      var nx = bs[(i + ((e.key === "ArrowRight" || e.key === "ArrowDown") ? 1 : -1) + bs.length) % bs.length];
+      onPick(nx.dataset[attr]);
+      var again = list.querySelector('[data-' + attr + '="' + nx.dataset[attr] + '"]'); if (again) again.focus();
+    });
+  }
+  radioKeys($("room-games"), "game", function (v) { roomDraft.game = v; renderRoomDialog(); });
+  radioKeys($("room-types"), "type", function (v) { roomDraft.roomType = v; renderRoomDialog(); });
+  radioKeys($("room-bots"), "bots", function (v) { roomDraft.bots = Number(v); renderRoomDialog(); });
+  $("room-topics").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-cat], [data-domain]"); if (!b) return;
+    var d = roomDraft;
+    if (b.dataset.cat) {
+      var i = d.cats.indexOf(b.dataset.cat);
+      if (i >= 0) d.cats.splice(i, 1); else d.cats.push(b.dataset.cat);
+    } else {
+      var ids = catsOf(b.dataset.domain).map(function (c) { return c.id; });
+      var allOn = ids.every(function (id) { return d.cats.indexOf(id) >= 0; });
+      d.cats = d.cats.filter(function (id) { return ids.indexOf(id) < 0; });
+      if (!allOn) d.cats = d.cats.concat(ids);
+    }
+    renderTopicChips(); validateRoom();
+  });
+  $("room-name").addEventListener("input", validateRoom);
+  $("room-name").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing && !$("room-next").disabled) $("room-next").click(); });
+  $("room-cancel").addEventListener("click", function () { closeRoomDialog(); });
+  function closeRoomDialog() {
+    var mode = roomDraft && roomDraft.mode;
+    setDialog(null);
+    if (mode === "edit") $("chat-input").focus();
+    else { var c = document.querySelector('.game-card[data-game="' + (roomDraft ? roomDraft.game : "race") + '"]'); if (c) c.focus(); }
+  }
+  $("dlg-room").addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.preventDefault(); closeRoomDialog(); return; }
+    trapTab($("dlg-room"), e);
+  });
+  $("dlg-room").addEventListener("mousedown", function (e) { if (e.target === $("dlg-room")) closeRoomDialog(); });
+  $("room-next").addEventListener("click", function () {
+    var d = roomDraft;
+    if ($("room-next").disabled) return;
+    if (d.mode === "edit") { setDialog(null); Room.changeGame(d.game, d.cats); $("chat-input").focus(); return; }
+    settings.name = cleanText($("room-name").value).trim().slice(0, NAME_MAX);
+    settings.game = d.game; settings.roomType = d.roomType; settings.bots = d.bots; settings.cats = d.cats.slice();
+    saveSettings();
+    if (d.roomType === "multi") { openMultiDialog(); return; }
+    setDialog(null);
+    startLocalGame();
+  });
+
+  // ── 멀티: 방 만들기 / 방 코드로 참가 ─────────────
+  function openMultiDialog(prefill) {
+    $("multi-local").hidden = !!FIREBASE_CONFIG;
+    $("multi-status").textContent = ""; $("multi-status").className = "status-line";
+    $("multi-code").value = prefill || ""; $("multi-code").setAttribute("aria-invalid", "false");
+    setDialog("dlg-multi");
+    setTimeout(function () { (prefill ? $("multi-join") : $("multi-create")).focus(); }, 30);
+    getNet().catch(function () { multiError("온라인 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."); });
+  }
+  function multiError(text) { $("multi-status").className = "status-line status-line--error"; $("multi-status").textContent = text; }
+  function multiBusy(on) { ["multi-create", "multi-join", "multi-back"].forEach(function (id) { $(id).disabled = on; }); if (on) { $("multi-status").className = "status-line"; $("multi-status").textContent = "연결하는 중이에요…"; } }
+  $("multi-back").addEventListener("click", function () { openRoomDialog("create", settings.game); });
+  $("dlg-multi").addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.preventDefault(); setDialog(null); return; }
+    trapTab($("dlg-multi"), e);
+  });
+  $("dlg-multi").addEventListener("mousedown", function (e) { if (e.target === $("dlg-multi")) setDialog(null); });
+  $("multi-code").addEventListener("input", function () {
+    var v = $("multi-code").value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (v !== $("multi-code").value) $("multi-code").value = v;
+    $("multi-code").setAttribute("aria-invalid", "false");
+  });
+  $("multi-code").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing) $("multi-join").click(); });
+  $("multi-create").addEventListener("click", function () {
+    multiBusy(true);
+    getNet().then(function () { return Room.create(); }).then(function () { multiBusy(false); setDialog(null); })
+      .catch(function (err) { multiBusy(false); multiError(err && err.userMsg || "방을 만들지 못했어요. 다시 시도해 주세요."); });
+  });
+  $("multi-join").addEventListener("click", function () {
+    var code = $("multi-code").value.trim().toUpperCase();
+    if (code.length !== 5) { $("multi-code").setAttribute("aria-invalid", "true"); multiError("방 코드 5자리를 넣어 주세요."); $("multi-code").focus(); return; }
+    multiBusy(true);
+    getNet().then(function () { return Room.join(code); }).then(function () { multiBusy(false); setDialog(null); })
+      .catch(function (err) { multiBusy(false); $("multi-code").setAttribute("aria-invalid", "true"); multiError(err && err.userMsg || "들어가지 못했어요. 다시 시도해 주세요."); });
+  });
+  function userErr(msg) { var e = new Error(msg); e.userMsg = msg; return e; }
+
+  // ── 방 (멀티) ─────────────────────────────────
+  var Room = {
+    code: null, meta: null, players: {}, unsubs: [], joinedAt: 0, lastRound: 0, prevHost: null, beat: null,
+    path: function (p) { return "rooms/" + this.code + (p ? "/" + p : ""); },
+    me: function () { return this.players[Net.uid]; },
+    isHost: function () { return this.meta && this.meta.host === Net.uid; },
+    list: function () {
+      var ps = this.players || {};
+      return Object.keys(ps).filter(function (k) { return ps[k] && ps[k].name; }).map(function (k) { var p = Object.assign({}, ps[k]); p.id = k; return p; })
+        .sort(function (a, b) { return (a.joinedAt || 0) - (b.joinedAt || 0) || (a.id < b.id ? -1 : 1); });
+    },
+    myEntry: function (taken) {
+      var color = settings.color;
+      if (taken.indexOf(color) >= 0) { for (var c = 1; c <= 12; c++) if (taken.indexOf(c) < 0) { color = c; break; } }
+      return { name: settings.name || "플레이어", color: color, ready: false, x: 0.2 + Math.random() * 0.6, y: 0.62 + Math.random() * 0.14, joinedAt: Net.TS, seen: Net.TS };
+    },
+    create: function () {
+      var self = this;
+      function attempt(n) {
+        if (n > 8) return Promise.reject(userErr("방 코드를 만들지 못했어요. 다시 시도해 주세요."));
+        var code = ""; for (var i = 0; i < 5; i++) code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+        return Net.get("rooms/" + code + "/players").then(function (ps) {
+          if (ps && Object.keys(ps).length) return attempt(n + 1);
+          var room = {
+            meta: { host: Net.uid, game: settings.game, cats: settings.cats.slice(), state: "lobby", round: 0, createdAt: Net.TS },
+            players: {}
+          };
+          room.players[Net.uid] = self.myEntry([]);
+          return Net.set("rooms/" + code, room).then(function () { return code; });
+        });
+      }
+      return attempt(0).then(function (code) { return self.enter(code); });
+    },
+    join: function (code) {
+      var self = this, uid = Net.uid;
+      return Promise.all([Net.get("rooms/" + code + "/meta"), Net.get("rooms/" + code + "/players"), Net.get("rooms/" + code + "/kicked/" + uid)]).then(function (r) {
+        var meta = r[0], ps = r[1];
+        if (!meta || !ps || !Object.keys(ps).length) throw userErr("없는 방 코드예요. 코드를 다시 확인해 주세요.");
+        if (r[2]) throw userErr("방장이 내보낸 방이라 다시 들어갈 수 없어요.");
+        if (meta.state === "playing" && !ps[uid]) throw userErr("지금 게임 중인 방이에요. 게임이 끝난 뒤에 다시 들어와 주세요.");
+        var full = false;
+        return Net.tx("rooms/" + code + "/players", function (cur) {
+          cur = cur || {};
+          if (cur[uid]) return cur;
+          var ids = Object.keys(cur).filter(function (k) { return cur[k] && cur[k].name; });
+          if (ids.length >= MAX_PLAYERS) { full = true; return undefined; }
+          full = false;
+          cur[uid] = self.myEntry(ids.map(function (k) { return cur[k].color; }));
+          return cur;
+        }).then(function (res) {
+          if (!res.committed) throw userErr(full ? "방이 가득 찼어요 (" + MAX_PLAYERS + "/" + MAX_PLAYERS + "). 다른 방에 들어가 주세요." : "들어가지 못했어요. 다시 시도해 주세요.");
+          return self.enter(code);
+        });
+      });
+    },
+    enter: function (code) {
+      var self = this;
+      this.code = code; this.meta = null; this.players = {}; this.lastRound = -1; this.prevHost = null;
+      this.joinedAt = Net.now() - 2000;
+      Net.onDisc(this.path("players/" + Net.uid));
+      Net.onDisc(this.path("game/" + Net.uid));
+      this.unsubs.push(Net.on(this.path("meta"), function (m) { self.onMeta(m); }));
+      this.unsubs.push(Net.on(this.path("players"), function (ps) { self.onPlayers(ps || {}); }));
+      this.unsubs.push(Net.onChild(this.path("events"), function (k, ev) { self.onEvent(k, ev); }));
+      this.beat = setInterval(function () {
+        if (!self.code || !self.players[Net.uid]) return;
+        if (Net.mode === "local") Net.set(self.path("players/" + Net.uid + "/seen"), Net.TS);
+        self.pruneEvents();
+      }, 5000);
+      Lobby.open();
+      Sound.play("join");
+      return Promise.resolve();
+    },
+    leave: function (msg) {
+      var self = this, code = this.code;
+      if (!code) return;
+      this.unsubs.forEach(function (u) { try { u(); } catch (e) {} });
+      this.unsubs = [];
+      clearInterval(this.beat);
+      var uid = Net.uid, others = Object.keys(this.players).filter(function (k) { return k !== uid; });
+      Net.cancelDisc(this.path("players/" + uid)); Net.cancelDisc(this.path("game/" + uid));
+      if (!others.length) Net.remove("rooms/" + code);
+      else { var up = {}; up["players/" + uid] = null; up["game/" + uid] = null; Net.update("rooms/" + code, up); }
+      this.code = null; this.meta = null; this.players = {};
+      Lobby.close();
+      if (G && G.multi) stopGame();
+      show("home"); renderHome();
+      if (msg) toast(msg);
+    },
+    onMeta: function (m) {
+      if (!m) { if (this.code) this.leave("방이 사라졌어요."); return; }
+      var prev = this.meta;
+      this.meta = m;
+      if (this.prevHost && m.host !== this.prevHost && this.players[m.host]) {
+        toast((m.host === Net.uid ? "내가" : (this.players[m.host].name || "") + "님이") + " 방장이 됐어요");
+      }
+      this.prevHost = m.host;
+      if (m.state === "playing" && m.round !== this.lastRound && m.startAt && (screen === "lobby" || screen === "result")) {
+        this.lastRound = m.round;
+        if (Net.now() < m.startAt + 1500) startMultiGame(m);
+      }
+      if (m.state === "lobby" && this.lastRound < 0) this.lastRound = m.round;
+      if (prev && (prev.game !== m.game || String(prev.cats) !== String(m.cats)) && screen === "lobby") toast("게임이 " + GAMES[m.game].name + "(으)로 바뀌었어요");
+      Lobby.render();
+    },
+    onPlayers: function (ps) {
+      var self = this, uid = Net.uid, before = this.players;
+      this.players = ps;
+      if (!this.code) return;
+      if (!ps[uid]) {
+        var code = this.code;
+        Net.get("rooms/" + code + "/kicked/" + uid).then(function (k) {
+          if (self.code !== code) return;
+          self.leave(k ? "방장이 방에서 내보냈어요." : "방에서 나왔어요.");
+        });
+        return;
+      }
+      // 같은 브라우저 시험 모드: 오래 응답 없는 사람 정리
+      if (Net.mode === "local") {
+        var now = Net.now(), stale = Object.keys(ps).filter(function (k) { return k !== uid && ps[k].seen && now - ps[k].seen > 180000; });
+        if (stale.length) { var up = {}; stale.forEach(function (k) { up["players/" + k] = null; }); Net.update(this.path(), up); }
+      }
+      // 방장이 없으면 가장 먼저 들어온 사람이 이어받음
+      if (this.meta && !ps[this.meta.host]) {
+        var first = this.list()[0];
+        if (first && first.id === uid) Net.set(this.path("meta/host"), uid);
+      }
+      Object.keys(ps).forEach(function (k) { if (!before[k] && k !== uid && screen === "lobby") Sound.play("join"); });
+      Lobby.render();
+      if (G && G.multi) syncRoster();
+    },
+    onEvent: function (k, ev) {
+      if (!ev || (ev.at || 0) < this.joinedAt) return;
+      Lobby.showEvent(ev);
+    },
+    pruneEvents: function () {
+      var self = this, cutoff = Net.now() - 30000;
+      Net.get(this.path("events")).then(function (evs) {
+        if (!evs) return;
+        var up = {}, any = false;
+        Object.keys(evs).forEach(function (k) { if (evs[k].uid === Net.uid && (evs[k].at || 0) < cutoff) { up[k] = null; any = true; } });
+        if (any) Net.update(self.path("events"), up);
+      });
+    },
+    send: function (ev) { ev.uid = Net.uid; ev.at = Net.TS; Net.push(this.path("events"), ev); },
+    setMine: function (o) { var up = {}; Object.keys(o).forEach(function (k) { up["players/" + Net.uid + "/" + k] = o[k]; }); return Net.update(this.path(), up); },
+    changeGame: function (game, cats) {
+      if (!this.isHost()) return;
+      var up = { "meta/game": game, "meta/cats": cats.slice() };
+      Object.keys(this.players).forEach(function (k) { up["players/" + k + "/ready"] = false; });
+      Net.update(this.path(), up);
+    },
+    transfer: function (uid) { if (this.isHost() && this.players[uid]) Net.set(this.path("meta/host"), uid); },
+    kick: function (uid) {
+      if (!this.isHost() || uid === Net.uid) return;
+      var up = {}; up["kicked/" + uid] = true; up["players/" + uid] = null;
+      Net.update(this.path(), up);
+    },
+    start: function () {
+      if (!this.isHost()) return;
+      var up = { "meta/state": "playing", "meta/seed": randInt(), "meta/startAt": Net.now() + COUNTDOWN_MS + 600, "meta/round": (this.meta.round || 0) + 1, "game": null };
+      Object.keys(this.players).forEach(function (k) { up["players/" + k + "/ready"] = false; });
+      Net.update(this.path(), up);
+    },
+    endRound: function (round) {
+      if (this.code && this.meta && this.meta.round === round && this.meta.state === "playing") Net.set(this.path("meta/state"), "lobby");
+    }
+  };
+
+  // ── 대기실 화면 ───────────────────────────────
+  var Lobby = {
+    avatars: {}, keys: {}, raf: 0, lastSend: 0, pos: null, walking: false, bubbles: {},
+    open: function () {
+      this.avatars = {}; this.bubbles = {}; this.pos = null;
+      $("stage-people").innerHTML = "";
+      show("lobby");
+      $("lb-code").textContent = Room.code;
+      this.render();
+      renderEmojiButtons();
+      $("chat-input").value = ""; updateChatCount();
+      setTimeout(function () { $("chat-input").focus(); }, 50);
+      this.loop();
+    },
+    close: function () { cancelAnimationFrame(this.raf); this.raf = 0; this.keys = {}; },
+    render: function () {
+      if (!Room.code || !Room.meta) return;
+      var self = this, list = Room.list(), meta = Room.meta, host = Room.isHost(), uid = Net.uid;
+      $("lb-count").textContent = list.length + "/" + MAX_PLAYERS;
+      $("lb-count2").textContent = list.length + "/" + MAX_PLAYERS;
+      $("lb-game").textContent = GAMES[meta.game] ? GAMES[meta.game].name : "";
+      $("lb-topic").textContent = DATA ? topicLabel(meta.cats || []) + " · 용어 " + termsFor(meta.cats || []).length + "개" : "";
+      $("lb-change").hidden = !host;
+      // 캐릭터
+      var stage = $("stage-people"), seen = {};
+      list.forEach(function (p) {
+        seen[p.id] = 1;
+        p.isMe = p.id === uid;
+        var a = self.avatars[p.id];
+        if (!a) {
+          a = makeAvatar(p);
+          a.querySelector(".avatar-name").textContent = p.name;
+          stage.appendChild(a); self.avatars[p.id] = a;
+        }
+        a.style.setProperty("--ch", colorVar(p.color));
+        var nm = a.querySelector(".avatar-name");
+        if (nm.textContent !== p.name) nm.textContent = p.name;
+        var tag = a.querySelector(".avatar-tag");
+        if (meta.host === p.id) { if (!tag) { tag = el("span", "avatar-tag", "방장"); a.appendChild(tag); } }
+        else if (tag) tag.remove();
+        if (p.isMe && self.pos) return; // 내 위치는 내가 움직이는 값으로 그림
+        if (p.isMe && !self.pos) self.pos = { x: p.x || 0.5, y: p.y || 0.7 };
+        var x = p.isMe ? self.pos.x : (p.x || 0.5), y = p.isMe ? self.pos.y : (p.y || 0.7);
+        var oldX = parseFloat(a.style.left);
+        if (!isNaN(oldX) && Math.abs(oldX - x * 100) > 0.05) {
+          a.classList.toggle("is-left", x * 100 < oldX);
+          a.classList.add("is-walk");
+          clearTimeout(a._walkT); a._walkT = setTimeout(function () { a.classList.remove("is-walk"); }, 220);
+        }
+        a.style.left = (x * 100) + "%"; a.style.top = (y * 100) + "%";
+        a.style.zIndex = Math.round(y * 100) + (p.isMe ? 1 : 0);
+      });
+      Object.keys(self.avatars).forEach(function (k) { if (!seen[k]) { self.avatars[k].remove(); delete self.avatars[k]; } });
+      // 사람 목록
+      var ul = $("lb-players"); ul.innerHTML = "";
+      list.forEach(function (p) {
+        var li = el("li", "player-row");
+        li.appendChild(miniAvatar(p.color));
+        var nm = el("span", "player-name", p.name);
+        if (p.id === uid) nm.appendChild(el("span", "text-small", " (나)"));
+        li.appendChild(nm);
+        if (meta.host === p.id) li.appendChild(el("span", "badge badge--host", "방장"));
+        else li.appendChild(el("span", "badge " + (p.ready ? "badge--ready" : "badge--wait"), p.ready ? "준비 완료" : "준비 중"));
+        if (host && p.id !== uid) {
+          var acts = el("span", "row-actions");
+          var t = el("button", "mini-btn", "방장 넘기기"); t.type = "button"; t.dataset.transfer = p.id; t.setAttribute("aria-label", p.name + "님에게 방장 넘기기");
+          var k = el("button", "mini-btn", "내보내기"); k.type = "button"; k.dataset.kick = p.id; k.setAttribute("aria-label", p.name + "님 내보내기");
+          acts.appendChild(t); acts.appendChild(k); li.appendChild(acts);
+        }
+        ul.appendChild(li);
+      });
+      // 색
+      var me = Room.me(), taken = list.filter(function (p) { return p.id !== uid; }).map(function (p) { return p.color; });
+      var sw = $("lb-colors");
+      if (!sw.childNodes.length) COLORS.forEach(function (c) {
+        var b = el("button", "swatch"); b.type = "button"; b.setAttribute("role", "radio"); b.dataset.color = c.id;
+        b.style.setProperty("--sw", colorVar(c.id)); b.title = c.name; sw.appendChild(b);
+      });
+      sw.querySelectorAll(".swatch").forEach(function (b) {
+        var id = Number(b.dataset.color), mine = me && me.color === id, used = taken.indexOf(id) >= 0;
+        b.setAttribute("aria-checked", mine ? "true" : "false");
+        b.disabled = used;
+        b.setAttribute("aria-label", COLORS[id - 1].name + (mine ? " (내 색)" : used ? " (다른 사람이 쓰는 중)" : ""));
+      });
+      // 준비 / 시작
+      var main = $("lb-main"), st = $("lb-status");
+      var others = list.filter(function (p) { return p.id !== meta.host; });
+      var notReady = others.filter(function (p) { return !p.ready; });
+      if (host) {
+        main.textContent = "게임 시작";
+        main.disabled = notReady.length > 0;
+        st.textContent = notReady.length ? "모두 준비하면 시작할 수 있어요 (" + (others.length - notReady.length) + "/" + others.length + " 준비)" : others.length ? "모두 준비했어요. 시작하세요!" : "혼자서도 시작할 수 있어요. 친구에게 방 코드를 알려 주세요.";
+      } else {
+        main.disabled = false;
+        main.textContent = me && me.ready ? "준비 풀기" : "준비 완료";
+        st.textContent = me && me.ready ? "방장이 시작하기를 기다리고 있어요" : "준비 완료를 누르면 방장이 시작할 수 있어요";
+      }
+    },
+    loop: function () {
+      var self = this, last = performance.now();
+      cancelAnimationFrame(this.raf);
+      function step(t) {
+        var dt = Math.min(0.05, (t - last) / 1000); last = t;
+        if (screen === "lobby" && self.pos) {
+          var k = self.keys, dx = (k.ArrowRight ? 1 : 0) - (k.ArrowLeft ? 1 : 0), dy = (k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0);
+          var a = self.avatars[Net.uid];
+          if ((dx || dy) && a) {
+            var stage = $("stage"), w = stage.clientWidth || 800, h = stage.clientHeight || 560;
+            var len = Math.hypot(dx, dy), speed = 240;
+            self.pos.x = Math.min(0.95, Math.max(0.05, self.pos.x + dx / len * speed * dt / w));
+            self.pos.y = Math.min(0.8, Math.max(0.3, self.pos.y + dy / len * speed * dt / h));
+            a.style.left = (self.pos.x * 100) + "%"; a.style.top = (self.pos.y * 100) + "%";
+            a.style.zIndex = Math.round(self.pos.y * 100) + 1;
+            if (dx) a.classList.toggle("is-left", dx < 0);
+            a.classList.add("is-walk");
+            if (t - self.lastSend > 100) { self.lastSend = t; Room.setMine({ x: +self.pos.x.toFixed(4), y: +self.pos.y.toFixed(4) }); }
+            self.walking = true;
+          } else if (self.walking) {
+            self.walking = false;
+            if (a) a.classList.remove("is-walk");
+            Room.setMine({ x: +self.pos.x.toFixed(4), y: +self.pos.y.toFixed(4) });
+          }
+        }
+        self.raf = requestAnimationFrame(step);
+      }
+      this.raf = requestAnimationFrame(step);
+    },
+    showEvent: function (ev) {
+      var a = this.avatars[ev.uid];
+      if (!a) return;
+      if (ev.type === "chat") {
+        var pop = a.querySelector(".avatar-pop");
+        var old = this.bubbles[ev.uid]; if (old) old.remove();
+        var b = el("div", "bubble", cleanText(ev.text).slice(0, CHAT_MAX));
+        pop.appendChild(b); this.bubbles[ev.uid] = b;
+        var self = this;
+        setTimeout(function () { b.classList.add("is-out"); setTimeout(function () { b.remove(); if (self.bubbles[ev.uid] === b) delete self.bubbles[ev.uid]; }, 240); }, 4500);
+        Sound.play("pop");
+      } else if (ev.type === "emoji" && EMOJI_SVG[ev.emoji]) {
+        var e = el("div", "emoji-float"); e.innerHTML = emojiSVG(ev.emoji);
+        a.querySelector(".avatar-pop").appendChild(e);
+        setTimeout(function () { e.remove(); }, 1900);
+        Sound.play("pop");
+      } else if (ev.type === "jump") {
+        pulse(a, "is-jump", 650); face(a, ev.face === "wow" ? "is-wow" : "is-happy", 1000);
+        Sound.play("pop");
+      } else if (ev.type === "wave") {
+        var b2 = this.avatars[ev.to];
+        if (b2) {
+          var ax = parseFloat(a.style.left), bx = parseFloat(b2.style.left);
+          a.classList.toggle("is-left", bx < ax); b2.classList.toggle("is-left", ax < bx);
+          pulse(b2, "is-wave", 1100); face(b2, "is-happy", 1100);
+        }
+        pulse(a, "is-wave", 1100); face(a, "is-happy", 1100);
+        Sound.play("join");
+      }
+    }
+  };
+  function renderEmojiButtons() {
+    var box = $("lb-emojis");
+    if (box.childNodes.length) return;
+    EMOJIS.forEach(function (e) {
+      var b = el("button", "emoji-btn"); b.type = "button"; b.dataset.emoji = e.id;
+      b.setAttribute("aria-label", e.name); b.title = e.name;
+      b.innerHTML = emojiSVG(e.id);
+      box.appendChild(b);
+    });
+  }
+  function updateChatCount() {
+    var n = CHAT_MAX - $("chat-input").value.length;
+    $("chat-count").textContent = Math.max(0, n) + "자 남음";
+  }
+  var chatComposing = false;
+  $("chat-input").addEventListener("compositionstart", function () { chatComposing = true; Lobby.keys = {}; });
+  $("chat-input").addEventListener("compositionend", function () { chatComposing = false; updateChatCount(); });
+  $("chat-input").addEventListener("input", function () { if ($("chat-input").value) Lobby.keys = {}; updateChatCount(); });
+  $("chat-input").addEventListener("keydown", function (e) {
+    var inp = $("chat-input");
+    var empty = !inp.value && !chatComposing && !e.isComposing;
+    if (empty && /^Arrow/.test(e.key)) { e.preventDefault(); Lobby.keys[e.key] = true; return; }
+    if (e.key === "Escape") { e.preventDefault(); inp.value = ""; updateChatCount(); return; }
+    if (e.key === "Enter") {
+      if (e.isComposing || chatComposing || e.keyCode === 229) return;
+      e.preventDefault();
+      var text = cleanText(inp.value).trim().slice(0, CHAT_MAX);
+      inp.value = ""; updateChatCount();
+      if (text && Room.code) Room.send({ type: "chat", text: text });
+    }
+  });
+  document.addEventListener("keyup", function (e) { if (/^Arrow/.test(e.key)) delete Lobby.keys[e.key]; });
+  window.addEventListener("blur", function () { Lobby.keys = {}; });
+  // 초점이 다른 곳(버튼 등)에 있을 때 글자 키를 누르면 채팅 입력칸으로 옮김
+  document.addEventListener("keydown", function (e) {
+    if (screen !== "lobby" || openDialog) return;
+    var t = e.target;
+    if (t === $("chat-input") || (t && t.tagName === "INPUT")) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length === 1 && e.key !== " " || e.key === "Process") $("chat-input").focus();
+  });
+  $("stage").addEventListener("click", function (e) {
+    var fig = e.target.closest(".avatar-fig");
+    if (fig) {
+      var uid = fig.parentNode.dataset.uid;
+      if (uid === Net.uid) Room.send({ type: "jump", face: Math.random() < 0.5 ? "happy" : "wow" });
+      else Room.send({ type: "wave", to: uid });
+    }
+    if (!e.target.closest(".chat-bar")) $("chat-input").focus({ preventScroll: true });
+  });
+  $("lb-emojis").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-emoji]"); if (!b) return;
+    Room.send({ type: "emoji", emoji: b.dataset.emoji });
+    refocusAfterClick(e);
+  });
+  $("lb-colors").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-color]"); if (!b || b.disabled) return;
+    var c = Number(b.dataset.color);
+    var used = Room.list().some(function (p) { return p.id !== Net.uid && p.color === c; });
+    if (used) return;
+    settings.color = c; saveSettings();
+    Room.setMine({ color: c });
+    var a = Lobby.avatars[Net.uid]; if (a) { a.style.setProperty("--ch", colorVar(c)); pulse(a, "is-jump", 650); }
+    refocusAfterClick(e);
+  });
+  $("lb-players").addEventListener("click", function (e) {
+    var t = e.target.closest("[data-transfer]"), k = e.target.closest("[data-kick]");
+    if (t) { Room.transfer(t.dataset.transfer); refocusAfterClick(e); }
+    if (k) {
+      var p = Room.players[k.dataset.kick];
+      confirmBox((p ? p.name : "이 사람") + "님을 방에서 내보낼까요?", "내보내기", "취소", function () { Room.kick(k.dataset.kick); });
+    }
+  });
+  $("lb-main").addEventListener("click", function (e) {
+    if (Room.isHost()) Room.start();
+    else { var me = Room.me(); Room.setMine({ ready: !(me && me.ready) }); }
+    refocusAfterClick(e);
+  });
+  $("lb-change").addEventListener("click", function () { openRoomDialog("edit"); });
+  $("lb-copy").addEventListener("click", function (e) {
+    var code = Room.code;
+    var done = function () { toast("방 코드 " + code + "를 복사했어요"); $("lb-copy").textContent = "복사했어요 ✓"; setTimeout(function () { $("lb-copy").textContent = "방 코드 복사"; }, 1800); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, function () { fallbackCopy(code); done(); });
+    else { fallbackCopy(code); done(); }
+    refocusAfterClick(e);
+  });
+  function fallbackCopy(text) {
+    var ta = el("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    ta.remove();
+  }
+  $("lb-leave").addEventListener("click", function () { confirmBox("방에서 나갈까요?", "나가기", "계속 있기", function () { Room.leave(); }); });
+
+  // ── 확인 창 ───────────────────────────────────
+  var confirmCb = null, confirmReturn = null;
+  function confirmBox(text, yes, no, cb) {
+    confirmCb = cb; confirmReturn = document.activeElement;
+    $("confirm-text").textContent = text;
+    $("confirm-yes").textContent = yes; $("confirm-no").textContent = no;
+    setDialog("dlg-confirm");
+    setTimeout(function () { $("confirm-no").focus(); }, 30);
+  }
+  function closeConfirm(ok) {
+    setDialog(null);
+    var cb = confirmCb; confirmCb = null;
+    if (ok && cb) cb();
+    else if (screen === "play") $("play-input").focus();
+    else if (screen === "lobby") $("chat-input").focus();
+    else if (confirmReturn && confirmReturn.focus) confirmReturn.focus();
+  }
+  $("confirm-yes").addEventListener("click", function () { closeConfirm(true); });
+  $("confirm-no").addEventListener("click", function () { closeConfirm(false); });
+  $("dlg-confirm").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); closeConfirm(false); } else trapTab($("dlg-confirm"), e); });
+
+  // ── 게임 실행 ─────────────────────────────────
+  var G = null;
+  var inp = $("play-input");
+
+  function newStats() {
+    return { score: 0, dist: 0, lives: LIVES, combo: 0, maxCombo: 0, correct: 0, ck: 0, wk: 0, chars: 0, done: false, doneAt: null, idx: 0, missed: [], missedIds: {} };
+  }
+  function startLocalGame() {
+    var seed = randInt();
+    var opp = [];
+    if (settings.roomType === "bot") {
+      var used = [settings.color];
+      BOT_WPM[settings.bots].forEach(function (w, i) {
+        var c = 1; while (used.indexOf(c) >= 0) c = (c % 12) + 1;
+        var pref = [7, 9, 3, 6, 11, 5, 2, 8];
+        for (var j = 0; j < pref.length; j++) if (used.indexOf(pref[j]) < 0) { c = pref[j]; break; }
+        used.push(c);
+        opp.push({ id: "bot" + i, name: "컴퓨터 " + "ABCD"[i], sub: w + " WPM", color: c, isBot: true, wpm: w });
+      });
+    }
+    beginGame({ game: settings.game, cats: settings.cats.slice(), seed: seed, multi: false, roomType: settings.roomType, startAt: Date.now() + COUNTDOWN_MS, opponents: opp, round: 0 });
+  }
+  function startMultiGame(meta) {
+    var opp = Room.list().filter(function (p) { return p.id !== Net.uid; }).map(function (p) {
+      return { id: p.id, name: p.name, color: p.color, isRemote: true };
+    });
+    beginGame({ game: meta.game, cats: meta.cats || [], seed: meta.seed, multi: true, roomType: "multi", startAt: meta.startAt, opponents: opp, round: meta.round });
+  }
+  function nowMs() { return G && G.multi ? Net.now() : Date.now(); }
+
+  function beginGame(cfg) {
+    stopGame();
+    if (openDialog) setDialog(null);
+    var course = makeCourse(cfg.game, cfg.cats, cfg.seed);
+    var myColor = cfg.multi && Room.me() ? Room.me().color : settings.color;
+    var me = { id: "me", name: settings.name || "나", color: myColor, isMe: true, st: newStats() };
+    G = {
+      game: cfg.game, cats: cfg.cats, seed: cfg.seed, multi: cfg.multi, roomType: cfg.roomType, round: cfg.round,
+      startAt: cfg.startAt, course: course, me: me, players: [me], ended: false, phase: "count", raf: 0,
+      lastSync: 0, cdShown: null, fall: { next: 0, active: [] }, firstDoneAt: null, unsub: null
+    };
+    cfg.opponents.forEach(function (o, i) {
+      var p = Object.assign({ st: newStats() }, o);
+      if (o.isBot) p.sim = simBot(cfg.game, course, o.wpm, cfg.seed + 101 * (i + 1));
+      G.players.push(p);
+    });
+    G.remoteAlive = function (id) { return !G.multi || !!(Room.players[id] && Room.players[id].name); };
+    if (G.multi) {
+      G.unsub = Net.on(Room.path("game"), function (all) { G && (G.remote = all || {}); });
+      G.remote = {};
+    }
+    $("pl-game").textContent = GAMES[G.game].name;
+    $("pl-mode").textContent = G.roomType === "bot" ? "컴퓨터와 대전 1:" + (G.players.length - 1) : ROOM_TYPES[G.roomType].name + (G.multi ? " " + G.players.length + "명" : "");
+    $("pl-topic").textContent = topicLabel(G.cats);
+    buildPlayUI();
+    show("play");
+    inp.value = ""; inp.disabled = false; inp.setAttribute("aria-invalid", "false");
+    setLang(false);
+    $("play-status").textContent = "";
+    $("cd-title").textContent = GAMES[G.game].name;
+    $("countdown").hidden = false;
+    inp.focus();
+    G.raf = requestAnimationFrame(tick);
+  }
+  function stopGame() {
+    if (!G) return;
+    cancelAnimationFrame(G.raf);
+    if (G.unsub) try { G.unsub(); } catch (e) {}
+    $("countdown").hidden = true;
+    G.ended = true;
+  }
+
+  // 화면 짜기
+  function buildPlayUI() {
+    var body = $("play-body"); body.innerHTML = "";
+    G.ui = {};
+    var me = G.me;
+    if (G.game === "race") {
+      var track = el("div", "track" + (G.players.length > 5 ? " is-many" : ""));
+      G.players.forEach(function (p) {
+        var lane = el("div", "lane" + (p.isMe ? " is-me" : ""));
+        var nm = el("div", "lane-name", p.name);
+        if (p.sub) nm.appendChild(el("span", "text-small", p.sub));
+        var road = el("div", "lane-road");
+        road.appendChild(el("span", "lane-finish"));
+        var run = el("div", "lane-runner");
+        var av = makeAvatar(p, { noName: true }); run.appendChild(av);
+        var place = el("span", "lane-place");
+        road.appendChild(run); road.appendChild(place);
+        lane.appendChild(nm); lane.appendChild(road); track.appendChild(lane);
+        p.ui = { lane: lane, run: run, av: av, place: place };
+        run.style.left = "26px";
+      });
+      body.appendChild(track);
+      var show = el("div", "term-show");
+      show.appendChild(G.ui.term = el("p", "term-text")); G.ui.term.lang = "en";
+      show.appendChild(G.ui.ko = el("p", "term-ko"));
+      show.appendChild(G.ui.next = el("p", "term-next"));
+      body.appendChild(show);
+      body.appendChild(G.ui.grace = el("p", "grace-note"));
+      G.ui.grace.setAttribute("aria-live", "polite");
+    } else if (G.game === "falling") {
+      var lay = el("div", "play-layout");
+      var arena = el("div", "arena");
+      arena.appendChild(el("div", "arena-ground"));
+      var av2 = makeAvatar(me); arena.appendChild(av2); me.ui = { av: av2 };
+      lay.appendChild(arena); G.ui.arena = arena;
+      lay.appendChild(G.ui.board = el("div", "board"));
+      body.appendChild(lay);
+    } else {
+      var lay2 = el("div", "play-layout");
+      var stage = el("div", "sixty-stage");
+      var av3 = makeAvatar(me); stage.appendChild(av3); me.ui = { av: av3 };
+      var col = el("div", "term-show");
+      col.appendChild(G.ui.big = el("p", "sixty-big", "60"));
+      col.appendChild(G.ui.term = el("p", "term-text")); G.ui.term.lang = "en";
+      col.appendChild(G.ui.ko = el("p", "term-ko"));
+      stage.appendChild(col);
+      lay2.appendChild(stage);
+      lay2.appendChild(G.ui.board = el("div", "board"));
+      body.appendChild(lay2);
+    }
+    renderTerm();
+    renderStats();
+    renderBoard(0);
+  }
+  function curTerm() {
+    if (G.game === "race") return G.course.terms[G.me.st.idx] || null;
+    if (G.game === "sixty") return G.course.terms[G.me.st.idx] || null;
+    return null;
+  }
+  // 목표 용어를 글자마다 칠함 (띄어쓰기·하이픈은 건너뛰고 비교)
+  function renderTerm() {
+    if (!G.ui.term) return;
+    var t = curTerm(), box = G.ui.term;
+    box.innerHTML = "";
+    if (!t) { G.ui.ko.textContent = ""; if (G.ui.next) G.ui.next.textContent = ""; return; }
+    var typed = norm(inp.value), tn = norm(t.en), ok = tn.indexOf(typed) === 0;
+    var k = 0, matched = ok ? typed.length : prefixLen(typed, tn), curSet = false;
+    var word = el("span", "word");
+    for (var i = 0; i < t.en.length; i++) {
+      var ch = t.en[i], sig = norm(ch) !== "";
+      if (ch === " ") { box.appendChild(word); box.appendChild(document.createTextNode(" ")); word = el("span", "word"); continue; }
+      var s = el("span", "char", ch);
+      if (sig) {
+        if (k < matched) s.classList.add("is-ok");
+        else if (!curSet) { curSet = true; s.classList.add(ok ? "is-cur" : "is-bad"); }
+        k++;
+      } else if (k <= matched && k > 0) s.classList.add("is-ok");
+      word.appendChild(s);
+    }
+    box.appendChild(word);
+    G.ui.ko.textContent = t.ko && t.ko.length ? t.ko[0] : "";
+    if (G.ui.next) {
+      var nx = G.course.terms[G.me.st.idx + 1];
+      G.ui.next.textContent = nx ? "다음 " + nx.en : "마지막 용어예요";
+    }
+  }
+  function prefixLen(a, b) { var i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; }
+  function accOf(st) { var n = st.ck + st.wk; return n ? st.ck / n : 1; }
+  function wpmOf(st, ms) { return ms > 0 ? (st.chars / 5) / (ms / 60000) : 0; }
+  function renderStats() {
+    var st = G.me.st, box = $("play-stats"), html = "";
+    var combo = '콤보<strong class="combo-pop">' + st.combo + "</strong>" + (comboMult(st.combo) > 1 ? ' <span>' + comboMult(st.combo).toFixed(1) + "배</span>" : "");
+    if (G.game === "race") html = "<span>진행<strong>" + Math.min(st.idx, RACE_LEN) + "/" + G.course.terms.length + "</strong></span><span>" + combo + "</span><span>정확도<strong>" + Math.round(accOf(st) * 100) + "%</strong></span>";
+    else if (G.game === "falling") html = "<span>점수<strong>" + fmtNum(st.score) + "</strong></span><span>" + combo + "</span><span>목숨<span class=\"lives\">" + hearts(st.lives) + "</span></span>";
+    else html = "<span>점수<strong>" + fmtNum(st.score) + "</strong></span><span>" + combo + "</span><span>맞힘<strong>" + st.correct + "</strong></span>";
+    if (box._html !== html) { box.innerHTML = html; box._html = html; }
+  }
+  function hearts(n) {
+    var s = "";
+    for (var i = 0; i < LIVES; i++) s += '<svg class="heart' + (i < n ? "" : " is-lost") + '" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-8-4.9-8-10.6C4 7 6 5 8.5 5c1.6 0 2.8.8 3.5 2 .7-1.2 1.9-2 3.5-2C18 5 20 7 20 9.9c0 5.7-8 10.6-8 10.6z"/></svg>';
+    return s + '<span class="visually-hidden">' + n + "개</span>";
+  }
+
+  // 입력
+  var playComposing = false;
+  function setLang(ko) {
+    $("lang-hint").classList.toggle("is-ko", ko);
+    $("lang-key").textContent = ko ? "한" : "A";
+    $("lang-text").textContent = ko ? "한글로 입력되고 있어요. 한/영 키를 눌러 주세요." : "영어로 쳐요 · 다 치면 저절로 넘어가요";
+  }
+  inp.addEventListener("compositionstart", function () { playComposing = true; });
+  inp.addEventListener("compositionend", function () { playComposing = false; onPlayInput({ inputType: "insertText" }); });
+  inp.addEventListener("input", function (e) { onPlayInput(e); });
+  function onPlayInput(e) {
+    if (!G || G.ended) return;
+    if (G.phase !== "play" || G.me.st.done) { inp.value = ""; return; }
+    var v = inp.value;
+    if (RE_HANGUL.test(v)) { setLang(true); inp.setAttribute("aria-invalid", "true"); return; }
+    setLang(false);
+    var n = norm(v), st = G.me.st, insert = !e.inputType || e.inputType.indexOf("insert") === 0;
+    if (G.game === "falling") { fallingInput(n, insert); return; }
+    var t = curTerm(); if (!t) return;
+    var tn = norm(t.en), ok = tn.indexOf(n) === 0;
+    if (insert && n.length) { if (ok) st.ck++; else st.wk++; }
+    if (!ok && insert && n.length) { if (!G._badSound || nowMs() - G._badSound > 300) { G._badSound = nowMs(); } }
+    inp.setAttribute("aria-invalid", ok ? "false" : "true");
+    if (n === tn) { acceptTerm(t); return; }
+    renderTerm();
+    renderStats();
+  }
+  inp.addEventListener("keydown", function (e) {
+    if (!G || G.ended) return;
+    if (e.key === "Enter") {
+      if (e.isComposing || playComposing || e.keyCode === 229) return;
+      e.preventDefault();
+      if (G.phase !== "play" || G.me.st.done) return;
+      var n = norm(inp.value);
+      if (RE_HANGUL.test(inp.value)) { inp.value = ""; setLang(true); renderTerm(); return; }
+      if (!n) return;
+      wrongSubmit();
+    } else if (e.key === "Escape") {
+      e.preventDefault(); askQuit();
+    }
+  });
+  function shakeInput() { inp.classList.remove("is-shake"); void inp.offsetWidth; inp.classList.add("is-shake"); }
+  function addMissed(st, term) { if (!st.missedIds[term.id]) { st.missedIds[term.id] = 1; st.missed.push(term); } }
+  function acceptTerm(t) {
+    var st = G.me.st, el2 = nowMs() - G.startAt;
+    st.combo++; st.maxCombo = Math.max(st.maxCombo, st.combo); st.correct++; st.chars += t.en.length;
+    if (G.game === "sixty") st.score += Math.round(t.en.length * 10 * comboMult(st.combo));
+    if (G.game === "race") st.dist += t.en.length;
+    st.idx++;
+    inp.value = ""; inp.setAttribute("aria-invalid", "false");
+    Sound.play("correct");
+    var av = G.me.ui && G.me.ui.av;
+    pulse(av, "is-jump", 650); face(av, "is-happy", 700);
+    if (G.game === "race" && st.idx >= G.course.terms.length) {
+      st.done = true; st.doneAt = el2;
+      inp.disabled = true;
+      $("play-status").textContent = "완주했어요! " + fmtRace(el2);
+    }
+    renderTerm(); renderStats(); syncMine(true);
+  }
+  function wrongSubmit() {
+    var st = G.me.st, t = curTerm();
+    st.combo = 0; st.wk++;
+    Sound.play("wrong"); shakeInput();
+    face(G.me.ui && G.me.ui.av, "is-sad", 800);
+    if (G.game === "falling") { inp.value = ""; inp.setAttribute("aria-invalid", "false"); clearFallingMatch(); renderStats(); return; }
+    if (t) addMissed(st, t);
+    if (G.game === "sixty") { st.idx++; $("play-status").textContent = "정답: " + t.en; }
+    else $("play-status").textContent = "다시 쳐 보세요";
+    inp.value = ""; inp.setAttribute("aria-invalid", "false");
+    renderTerm(); renderStats(); syncMine(true);
+  }
+
+  // 떨어지는 용어
+  function fallingInput(n, insert) {
+    var st = G.me.st, best = null, exact = null;
+    G.fall.active.forEach(function (w) {
+      if (w.gone) return;
+      var tn = w.n;
+      if (n && tn.indexOf(n) === 0) { if (!best || w.prog > best.prog) best = w; }
+      if (n && tn === n) { if (!exact || w.prog > exact.prog) exact = w; }
+    });
+    if (insert && n.length) { if (best) st.ck++; else st.wk++; }
+    inp.setAttribute("aria-invalid", n && !best ? "true" : "false");
+    if (exact) { hitWord(exact); return; }
+    G.fall.target = best;
+    paintFalling(n);
+  }
+  function paintFalling(n) {
+    G.fall.active.forEach(function (w) {
+      if (w.gone) return;
+      var on = w === G.fall.target && n;
+      w.node.classList.toggle("is-target", !!on);
+      var m = on ? matchedChars(w.term.en, n.length) : 0;
+      if (w._m === m) return;
+      w._m = m;
+      w.node.innerHTML = "";
+      if (m) w.node.appendChild(el("span", "m", w.term.en.slice(0, m)));
+      w.node.appendChild(el("span", m ? "r" : "", w.term.en.slice(m)));
+    });
+  }
+  // 정규화 글자 수 k만큼 맞았을 때, 원래 용어에서 몇 글자까지 칠할지
+  function matchedChars(s, k) { var c = 0; for (var i = 0; i < s.length; i++) { if (norm(s[i]) !== "") { if (c === k) return i; c++; } } return s.length; }
+  function clearFallingMatch() { G.fall.target = null; paintFalling(""); }
+  function hitWord(w) {
+    var st = G.me.st;
+    w.gone = true;
+    st.combo++; st.maxCombo = Math.max(st.maxCombo, st.combo); st.correct++; st.chars += w.term.en.length;
+    var gain = Math.round(w.term.en.length * 10 * comboMult(st.combo) * (1 + 0.5 * (1 - Math.min(1, w.prog))));
+    st.score += gain;
+    w.node.classList.add("is-hit");
+    var f = el("span", "score-float", "+" + gain);
+    f.style.left = w.x + "px"; f.style.top = w.y + "px";
+    G.ui.arena.appendChild(f);
+    setTimeout(function () { f.remove(); w.node.remove(); }, 800);
+    inp.value = ""; inp.setAttribute("aria-invalid", "false");
+    Sound.play("correct");
+    pulse(G.me.ui.av, "is-jump", 650); face(G.me.ui.av, "is-happy", 700);
+    G.fall.target = null; paintFalling("");
+    renderStats(); syncMine(true);
+  }
+  function updateFalling(elapsed) {
+    var arena = G.ui.arena, W = arena.clientWidth, H = arena.clientHeight - 70, st = G.me.st, drops = G.course.drops;
+    while (G.fall.next < drops.length && drops[G.fall.next].at <= elapsed && !st.done) {
+      var d = drops[G.fall.next++];
+      var node = el("span", "fword", d.term.en); node.lang = "en";
+      arena.appendChild(node);
+      var w = { term: d.term, n: norm(d.term.en), at: d.at, fall: d.fall, node: node, prog: 0, x: 0, y: 0, _m: 0 };
+      var ww = node.offsetWidth;
+      w.x = Math.round(16 + d.x * Math.max(0, W - ww - 32));
+      G.fall.active.push(w);
+    }
+    var missed = false;
+    G.fall.active.forEach(function (w) {
+      if (w.gone) return;
+      w.prog = (elapsed - w.at) / w.fall;
+      if (w.prog >= 1) {
+        w.gone = true; missed = true;
+        st.lives--; st.combo = 0; addMissed(st, w.term);
+        w.node.classList.add("is-miss");
+        setTimeout(function () { w.node.remove(); }, 450);
+        if (G.fall.target === w) G.fall.target = null;
+        return;
+      }
+      w.y = Math.round(w.prog * (H - 44));
+      w.node.style.transform = "translate(" + w.x + "px," + w.y + "px)";
+      w.node.classList.toggle("is-low", w.prog > 0.75);
+    });
+    G.fall.active = G.fall.active.filter(function (w) { return !w.gone || w.node.isConnected; });
+    if (missed) {
+      Sound.play("miss");
+      arena.classList.remove("is-hit-ground"); void arena.offsetWidth; arena.classList.add("is-hit-ground");
+      face(G.me.ui.av, "is-sad", 1000); pulse(G.me.ui.av, "is-shake", 320);
+      if (st.lives <= 0) {
+        st.lives = 0; st.done = true; st.doneAt = elapsed;
+        inp.value = ""; inp.disabled = true;
+        G.fall.active.forEach(function (w) { if (!w.gone) { w.gone = true; w.node.remove(); } });
+        if (G.players.length > 1 && G.multi) {
+          var o = el("div", "out-note"); o.innerHTML = "<strong>목숨을 다 썼어요</strong><span class=\"text-small\">다른 사람이 끝날 때까지 순위를 볼 수 있어요</span>";
+          arena.appendChild(o);
+        }
+      }
+      renderStats(); syncMine(true);
+      paintFalling(norm(inp.value));
+    }
+  }
+
+  // 점수판 (컴퓨터·멀티)
+  function playerVals(p, elapsed) {
+    if (p.isMe) return p.st;
+    if (p.isBot) {
+      var s = botState(p, elapsed), st = p.st;
+      if (G.game === "race") {
+        st.dist = s ? s.dist : 0; st.correct = s ? s.correct : 0; st.combo = s ? s.combo : 0;
+        st.done = p.sim.doneAt <= elapsed; st.doneAt = st.done ? p.sim.doneAt : null; st.idx = st.correct;
+      } else {
+        st.score = s ? s.score : 0; st.correct = s ? s.correct : 0; st.combo = s ? s.combo : 0;
+        if (G.game === "falling") { st.lives = s && s.lives != null ? s.lives : LIVES; st.done = p.sim.deadAt != null && p.sim.deadAt <= elapsed; st.doneAt = st.done ? p.sim.deadAt : null; }
+      }
+      st.acc = p.sim.acc; st.maxCombo = p.sim.maxCombo;
+      return st;
+    }
+    var r = (G.remote || {})[p.id];
+    if (r) { Object.assign(p.st, { score: r.score || 0, dist: r.dist || 0, lives: r.lives != null ? r.lives : LIVES, combo: r.combo || 0, correct: r.correct || 0, done: !!r.done, doneAt: r.doneAt != null ? r.doneAt : null, acc: r.acc, maxCombo: r.maxCombo || 0, idx: r.idx || 0, wpm: r.wpm }); }
+    return p.st;
+  }
+  function standings(elapsed, final) {
+    var list = G.players.map(function (p) { var st = playerVals(p, elapsed); return { p: p, st: st }; });
+    if (G.game === "race") {
+      list.sort(function (a, b) {
+        var ad = a.st.done && (!final || a.st.doneAt <= final), bd = b.st.done && (!final || b.st.doneAt <= final);
+        if (ad && bd) return a.st.doneAt - b.st.doneAt;
+        if (ad !== bd) return ad ? -1 : 1;
+        if (b.st.dist !== a.st.dist) return b.st.dist - a.st.dist;
+        return (b.st.acc != null ? b.st.acc : accOf(b.st)) - (a.st.acc != null ? a.st.acc : accOf(a.st));
+      });
+    } else {
+      list.sort(function (a, b) {
+        if (b.st.score !== a.st.score) return b.st.score - a.st.score;
+        if (G.game === "falling") return (b.st.doneAt == null ? Infinity : b.st.doneAt) - (a.st.doneAt == null ? Infinity : a.st.doneAt);
+        return (b.st.acc != null ? b.st.acc : accOf(b.st)) - (a.st.acc != null ? a.st.acc : accOf(a.st));
+      });
+    }
+    return list;
+  }
+  function renderBoard(elapsed) {
+    if (G.game === "race") {
+      var total = G.course.terms.reduce(function (s, t) { return s + t.en.length; }, 0);
+      var ranks = standings(elapsed);
+      G.players.forEach(function (p) {
+        var st = p.st, u = p.ui; if (!u) return;
+        var pct = Math.min(1, st.dist / total);
+        var left = "calc(26px + (100% - 64px) * " + pct.toFixed(4) + ")";
+        if (u._left !== left) {
+          u.run.style.left = left; u._left = left;
+          if (!p.isMe && st.dist) { pulse(u.av, "is-jump", 650); }
+        }
+        u.av.classList.toggle("is-walk", pct > 0 && pct < 1 && G.phase === "play");
+        var rank = ranks.findIndex(function (x) { return x.p === p; }) + 1;
+        u.place.textContent = st.done ? rank + "등 · " + fmtRace(st.doneAt) : "";
+        if (st.done && !u._done) { u._done = true; face(u.av, "is-happy", 3000); }
+      });
+      return;
+    }
+    var box = G.ui.board; if (!box) return;
+    if (G.players.length < 2) {
+      var html1 = "<h2>내 기록</h2><p class=\"text-small\">" + (best[G.game] != null ? bestText(G.game) : "첫 기록에 도전해요") + "</p>";
+      if (box._html !== html1) { box.innerHTML = html1; box._html = html1; }
+      return;
+    }
+    var rows = standings(elapsed);
+    var key = rows.map(function (r) { return r.p.id + ":" + r.st.score + ":" + r.st.lives + ":" + r.st.done; }).join("|");
+    if (box._key === key) return;
+    box._key = key; box.innerHTML = "";
+    box.appendChild(el("h2", null, "순위"));
+    rows.forEach(function (r, i) {
+      var row = el("div", "board-row" + (r.p.isMe ? " is-me" : ""));
+      row.appendChild(el("span", "board-rank", String(i + 1)));
+      row.appendChild(miniAvatar(r.p.color));
+      var nm = el("span", "board-name", r.p.name + (r.p.isMe ? " (나)" : ""));
+      var sub = G.game === "falling" ? (r.st.done ? "탈락" : "목숨 " + r.st.lives) : r.p.sub || "";
+      if (r.p.isRemote && !G.remoteAlive(r.p.id)) sub = "나감";
+      if (sub) nm.appendChild(el("span", "text-small", sub));
+      row.appendChild(nm);
+      row.appendChild(el("span", "board-val", fmtNum(r.st.score)));
+      box.appendChild(row);
+    });
+  }
+
+  // 멀티: 내 상태 올리기
+  function syncMine(force) {
+    if (!G || !G.multi || !Room.code) return;
+    var t = performance.now();
+    if (!force && t - G.lastSync < 250) return;
+    G.lastSync = t;
+    var st = G.me.st, elapsed = nowMs() - G.startAt;
+    Net.set(Room.path("game/" + Net.uid), {
+      score: st.score, dist: st.dist, lives: st.lives, combo: st.combo, maxCombo: st.maxCombo, correct: st.correct, idx: st.idx,
+      done: st.done, doneAt: st.doneAt == null ? null : Math.round(st.doneAt), acc: +accOf(st).toFixed(4),
+      wpm: Math.round(wpmOf(st, activeMs(st, elapsed)))
+    });
+  }
+  function syncRoster() { if (G && G.ui && G.game !== "race") G.ui.board._key = null; }
+
+  function activeMs(st, elapsed) {
+    if (G.game === "sixty") return Math.min(elapsed, SIXTY_MS);
+    if (st.doneAt != null) return st.doneAt;
+    return Math.min(elapsed, MAX_MS);
+  }
+  function timeLimit() { return G.game === "sixty" ? SIXTY_MS : MAX_MS; }
+
+  // 끝났는지 판단
+  function overAt(elapsed) {
+    var limit = timeLimit();
+    if (elapsed >= limit) return limit;
+    var present = G.players.filter(function (p) { return !p.isRemote || G.remoteAlive(p.id); });
+    var sts = present.map(function (p) { return playerVals(p, elapsed); });
+    if (G.game === "race") {
+      var first = null;
+      sts.forEach(function (s) { if (s.done && (first == null || s.doneAt < first)) first = s.doneAt; });
+      G.firstDoneAt = first;
+      if (sts.every(function (s) { return s.done; })) return elapsed;
+      if (first != null && elapsed >= first + RACE_GRACE) return first + RACE_GRACE;
+      // 컴퓨터 대전에서 내가 완주하면 남은 결과는 미리 계산해 바로 보여줌
+      if (!G.multi && G.me.st.done) {
+        var firstAll = G.me.st.doneAt;
+        G.players.forEach(function (p) { if (p.isBot) firstAll = Math.min(firstAll, p.sim.doneAt); });
+        return Math.min(limit, firstAll + RACE_GRACE, Math.max.apply(null, G.players.map(function (p) { return p.isBot ? p.sim.doneAt : p.st.doneAt; })));
+      }
+      return null;
+    }
+    if (G.game === "falling") {
+      if (!G.multi && G.me.st.done) {
+        // 컴퓨터는 남은 판을 바로 끝까지 돌린 결과로
+        var last = G.me.st.doneAt;
+        G.players.forEach(function (p) { if (p.isBot) last = Math.max(last, p.sim.deadAt != null ? p.sim.deadAt : limit); });
+        return Math.min(limit, last);
+      }
+      if (sts.every(function (s) { return s.done; })) return elapsed;
+      return null;
+    }
+    return null;
+  }
+
+  function tick() {
+    if (!G || G.ended) return;
+    var now = nowMs(), elapsed = now - G.startAt;
+    if (elapsed < 0) {
+      var n = Math.ceil(-elapsed / 1000);
+      if (n > 3) n = 3;
+      if (G.cdShown !== n) { G.cdShown = n; $("cd-num").textContent = String(n); $("cd-num").classList.remove("is-tick"); void $("cd-num").offsetWidth; $("cd-num").classList.add("is-tick"); Sound.play("tick"); }
+      $("pl-time").textContent = fmtTime(timeLimit());
+      G.raf = requestAnimationFrame(tick);
+      return;
+    }
+    if (G.phase === "count") {
+      G.phase = "play"; $("countdown").hidden = true; Sound.play("go");
+      if (document.activeElement !== inp && !openDialog) inp.focus();
+      inp.value = "";
+    }
+    var left = timeLimit() - elapsed;
+    $("pl-time").textContent = fmtTime(left);
+    $("pl-time").classList.toggle("is-low", left <= 10000);
+    if (G.game === "falling" && !G.me.st.done) updateFalling(elapsed);
+    if (G.game === "sixty" && G.ui.big) { var s = Math.max(0, Math.ceil(left / 1000)); if (G.ui.big.textContent !== String(s)) { G.ui.big.textContent = String(s); G.ui.big.classList.toggle("is-low", s <= 10); } }
+    if (G.game === "race" && G.ui.grace) {
+      var msg = "";
+      if (G.firstDoneAt != null && !G.me.st.done) {
+        var rem = G.firstDoneAt + RACE_GRACE - elapsed;
+        if (rem > 0) msg = "누군가 완주했어요! " + Math.ceil(rem / 1000) + "초 안에 완주하세요";
+      } else if (G.me.st.done && G.multi) msg = "다른 사람이 완주하기를 기다리는 중이에요";
+      if (G.ui.grace.textContent !== msg) G.ui.grace.textContent = msg;
+    }
+    renderBoard(elapsed);
+    syncMine(false);
+    var end = overAt(elapsed);
+    if (end != null) { finishGame(end); return; }
+    G.raf = requestAnimationFrame(tick);
+  }
+
+  // ── 결과 ─────────────────────────────────────
+  function finishGame(endAt) {
+    var g = G;
+    g.ended = true; g.phase = "end";
+    cancelAnimationFrame(g.raf);
+    inp.disabled = true;
+    var st = g.me.st;
+    if (g.game === "sixty" || (g.game === "falling" && !st.done)) { st.doneAt = st.doneAt == null ? null : st.doneAt; }
+    syncMine(true);
+    Sound.play("end");
+    var show2 = function () {
+      if (G !== g) return;
+      if (g.unsub) try { g.unsub(); } catch (e) {}
+      if (g.multi) Room.endRound(g.round);
+      renderResult(g, endAt);
+    };
+    if (g.multi) setTimeout(show2, 900); else setTimeout(show2, 500);
+  }
+  function renderResult(g, endAt) {
+    var me = g.me, st = me.st, rows = standings(endAt, g.game === "race" ? endAt : null);
+    var rank = rows.findIndex(function (r) { return r.p.isMe; }) + 1;
+    var many = g.players.length > 1;
+    var ms = activeMs(st, endAt);
+    // 제목·큰 숫자
+    var title, big, unit = "";
+    if (g.game === "race") {
+      var finished = st.done && st.doneAt <= endAt;
+      title = many ? (rank === 1 ? "1등!" : rank + "등") : finished ? "완주!" : "시간이 다 됐어요";
+      big = finished ? fmtRace(st.doneAt) : Math.round(st.dist / g.course.terms.reduce(function (s, t) { return s + t.en.length; }, 0) * 100);
+      unit = finished ? "" : "% 달림";
+    } else {
+      title = many ? (rank === 1 ? "1등!" : rank + "등") : g.game === "falling" ? (st.done ? "목숨을 다 썼어요" : "끝까지 버텼어요!") : "끝!";
+      big = fmtNum(st.score); unit = "점";
+    }
+    $("rs-title").textContent = title;
+    $("rs-big").textContent = big; $("rs-unit").textContent = unit;
+    $("rs-info").textContent = GAMES[g.game].name + " · " + (g.roomType === "bot" ? "컴퓨터와 대전" : ROOM_TYPES[g.roomType].name) + " · " + topicLabel(g.cats);
+    var av = $("rs-avatar"); av.innerHTML = "";
+    var a = makeAvatar(me, { noName: true }); av.appendChild(a);
+    setTimeout(function () { pulse(a, "is-jump", 650); face(a, rank === 1 || !many ? "is-happy" : "is-wow", 4000); }, 300);
+    // 최고 기록 (혼자·컴퓨터 대전만)
+    var isNew = false, bestLine = "";
+    if (!g.multi) {
+      var val = g.game === "race" ? (st.done && st.doneAt <= endAt ? st.doneAt : null) : st.score;
+      var old = best[g.game];
+      if (val != null && (old == null || (g.game === "race" ? val < old : val > old)) && (g.game === "race" || val > 0)) { isNew = old != null || true; best[g.game] = Math.round(val); saveSettings(); }
+      bestLine = best[g.game] != null ? "내 최고 기록 " + (g.game === "race" ? fmtRace(best[g.game]) : fmtNum(best[g.game]) + "점") : "";
+      if (isNew && old == null) bestLine = "첫 기록이에요";
+      else if (!isNew && old != null) bestLine = "내 최고 기록 " + (g.game === "race" ? fmtRace(old) : fmtNum(old) + "점");
+    } else bestLine = "멀티 대전 결과는 저장하지 않아요";
+    $("rs-best").textContent = bestLine;
+    $("rs-new").hidden = !isNew;
+    // 숫자 타일
+    var tiles = [
+      ["맞힌 용어", st.correct + "개"],
+      ["정확도", Math.round(accOf(st) * 100) + "%"],
+      ["속도", Math.round(wpmOf(st, ms)) + " WPM"],
+      ["최고 콤보", st.maxCombo + ""]
+    ];
+    if (g.game === "falling") tiles[3] = ["버틴 시간", fmtRace(st.doneAt != null ? st.doneAt : endAt)];
+    var box = $("rs-stats"); box.innerHTML = "";
+    tiles.forEach(function (t) { var d = el("div", "stat-tile"); d.appendChild(el("span", "stat-label", t[0])); d.appendChild(el("span", "stat-value", t[1])); box.appendChild(d); });
+    // 순위
+    $("rs-rank-sec").hidden = !many;
+    var ol = $("rs-rank"); ol.innerHTML = "";
+    var total = g.course.terms ? g.course.terms.reduce(function (s, t) { return s + t.en.length; }, 0) : 1;
+    rows.forEach(function (r, i) {
+      var li = el("li", "board-row" + (r.p.isMe ? " is-me" : ""));
+      li.appendChild(el("span", "board-rank", String(i + 1)));
+      li.appendChild(miniAvatar(r.p.color));
+      var nm = el("span", "board-name", r.p.name + (r.p.isMe ? " (나)" : ""));
+      var sub2 = r.p.isRemote && !g.remoteAlive(r.p.id) ? "나감" : r.p.sub;
+      if (sub2) nm.appendChild(el("span", "text-small", sub2));
+      li.appendChild(nm);
+      var v;
+      if (g.game === "race") v = r.st.done && r.st.doneAt <= endAt ? fmtRace(r.st.doneAt) : Math.round(r.st.dist / total * 100) + "% 달림";
+      else v = fmtNum(r.st.score) + "점";
+      li.appendChild(el("span", "board-val", v));
+      ol.appendChild(li);
+    });
+    // 놓친 용어
+    var ul = $("rs-missed"); ul.innerHTML = "";
+    if (g.game === "race" && !st.done) {
+      g.course.terms.slice(st.idx).forEach(function (t) { addMissed(st, t); });
+    }
+    if (!st.missed.length) ul.appendChild(el("li", "text-small", "놓친 용어가 없어요. 멋져요!"));
+    st.missed.forEach(function (t) {
+      var li = el("li");
+      var en = el("span", "missed-en", t.en); en.lang = "en";
+      li.appendChild(en);
+      if (t.ko && t.ko.length) { li.appendChild(el("span", "dot", " · ")); li.appendChild(el("span", null, t.ko.join(", "))); }
+      ul.appendChild(li);
+    });
+    $("rs-again").innerHTML = g.multi ? "대기실로 돌아가기 <kbd class=\"kbd\">Enter</kbd>" : "다시 하기 <kbd class=\"kbd\">Enter</kbd>";
+    show("result");
+    $("scr-result").focus();
+    G = g; // 다시 하기에 설정을 씀
+  }
+  $("rs-again").addEventListener("click", againOrBack);
+  function againOrBack() {
+    if (!G) return;
+    if (G.multi) {
+      var g = G; G = null;
+      if (Room.code) { Lobby.open(); Room.setMine({ ready: false }); } else { show("home"); renderHome(); }
+      void g;
+      return;
+    }
+    if (G.roomType === "bot" || G.roomType === "solo") { startLocalGame(); }
+  }
+  $("rs-home").addEventListener("click", function () {
+    if (G && G.multi && Room.code) Room.leave();
+    G = null; show("home"); renderHome();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (screen === "result" && e.key === "Enter" && !openDialog && !e.target.closest("button")) { e.preventDefault(); againOrBack(); }
+  });
+
+  // 그만두기
+  function askQuit() {
+    if (!G || G.ended) return;
+    confirmBox(G.multi ? "게임에서 나갈까요? 방에서도 나가게 돼요." : "게임을 그만둘까요? 이번 판 기록은 남지 않아요.", "나가기", "계속하기", function () {
+      var multi = G && G.multi;
+      stopGame(); G = null;
+      if (multi) Room.leave(); else { show("home"); renderHome(); }
+    });
+  }
+  $("pl-quit").addEventListener("click", askQuit);
+  document.addEventListener("click", function (e) {
+    if (screen === "lobby") return;
+    var fig = e.target.closest(".avatar-fig, .hero-cast > span");
+    if (!fig) return;
+    var a = fig.closest(".avatar") || fig;
+    pulse(a, "is-jump", 650); face(a, Math.random() < 0.5 ? "is-happy" : "is-wow", 900); Sound.play("pop");
+  });
+  $("scr-play").addEventListener("mousedown", function (e) {
+    if (!e.target.closest("button, input")) setTimeout(function () { if (screen === "play" && !openDialog) inp.focus(); }, 0);
+  });
+
+  // ── 시작 ─────────────────────────────────────
+  function init() {
+    renderSoundButtons();
+    renderHome();
+    loadData().then(function () {
+      $("load-error").hidden = true;
+      document.querySelectorAll(".game-card").forEach(function (c) { c.disabled = false; });
+    }).catch(function () {
+      $("load-error").hidden = false;
+      $("load-error").textContent = "용어를 불러오지 못했어요. 새로고침해 주세요.";
+      document.querySelectorAll(".game-card").forEach(function (c) { c.disabled = true; });
+    });
+  }
+  init();
+  window.__lingoGame = { simBot: simBot, makeCourse: makeCourse, get G() { return G; }, Room: Room, get Net() { return Net; } };
+})();
+</script>
+</body>
+</html>
