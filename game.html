@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>타자 게임 · Lingo Loop</title>
+<title>Lingo Loop Match!</title>
 <style>
-/* Pretendard (SIL OFL 1.1, github.com/orioncactus/pretendard). index.html에 넣은 것과 같은 글자 묶음 */
-@font-face { font-family: "Pretendard Variable"; font-weight: 45 920; font-style: normal; font-display: swap; src: url(assets/pretendard-subset.woff2) format("woff2"); }
+/* Paperlogy (SIL OFL 1.1, PT&, github.com/projectnoonnu/2408-3). 쓰는 굵기 5개만 */
+@font-face { font-family: "Paperlogy"; font-weight: 400; font-style: normal; font-display: swap; src: url(assets/fonts/Paperlogy-4Regular.woff2) format("woff2"); }
+@font-face { font-family: "Paperlogy"; font-weight: 500; font-style: normal; font-display: swap; src: url(assets/fonts/Paperlogy-5Medium.woff2) format("woff2"); }
+@font-face { font-family: "Paperlogy"; font-weight: 600; font-style: normal; font-display: swap; src: url(assets/fonts/Paperlogy-6SemiBold.woff2) format("woff2"); }
+@font-face { font-family: "Paperlogy"; font-weight: 700; font-style: normal; font-display: swap; src: url(assets/fonts/Paperlogy-7Bold.woff2) format("woff2"); }
+@font-face { font-family: "Paperlogy"; font-weight: 800 900; font-style: normal; font-display: swap; src: url(assets/fonts/Paperlogy-8ExtraBold.woff2) format("woff2"); }
 
 /* 색·크기·움직임 토큰은 index.html과 같음. 캐릭터 전용 12색만 새로 더함 (scope/game-v1-scope.md) */
 :root {
@@ -33,7 +37,7 @@
   --ch-9: #33A597; --ch-10: #A3C760; --ch-11: #5A9A4E; --ch-12: #9C6F4E;
   --tear: #7CC6E6;
 
-  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+  --font-sans: "Paperlogy", -apple-system, BlinkMacSystemFont,
     system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo",
     "Noto Sans KR", "Malgun Gothic", sans-serif;
 
@@ -146,9 +150,10 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .hero h1 { font-size: var(--text-hero); font-weight: 800; line-height: 1.05; letter-spacing: -0.045em; }
 .hero-accent { background: linear-gradient(transparent 62%, var(--color-brand) 62%, var(--color-brand) 92%, transparent 92%); padding-inline: 0.04em; }
 .hero p { font-size: var(--text-lede); line-height: 1.45; color: var(--color-text-muted); font-weight: 500; letter-spacing: -0.02em; }
+.hero p.hero-name { font-size: 16px; font-weight: 600; color: var(--color-quiet); }
 .hero-cast { display: flex; gap: 6px; align-items: flex-end; block-size: 76px; margin-block-end: 4px; }
-.hero-cast .ch-svg { inline-size: 54px; block-size: 61px; }
-.hero-cast > :nth-child(2) .ch-svg { inline-size: 64px; block-size: 72px; }
+.hero-cast .ch-svg { inline-size: 54px; block-size: 48px; }
+.hero-cast > :nth-child(2) .ch-svg { inline-size: 64px; block-size: 57px; }
 .hero-cast > span { cursor: pointer; }
 .hero-cast > span .ch-svg { transform-origin: 50% 100%; }
 .hero-cast > span.is-jump .ch-svg { animation: ch-jump 620ms var(--ease-out); }
@@ -176,12 +181,12 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .art-word { position: absolute; padding: 2px 10px; border-radius: var(--radius-pill); background: var(--color-bg); color: var(--color-text); font-size: var(--text-small); font-weight: 700; white-space: nowrap; }
 .art-timer { position: absolute; inset-inline-end: 0; inset-block-end: 0; font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.05em; color: var(--color-brand); font-variant-numeric: tabular-nums; }
 .game-card-art .ch-svg { filter: drop-shadow(0 0 1.2px rgba(245, 245, 247, 0.95)); }
-.game-card-art .ch-svg { position: absolute; inset-block-end: 6px; inline-size: 48px; block-size: 54px; }
+.game-card-art .ch-svg { position: absolute; inset-block-end: 6px; inline-size: 48px; block-size: 43px; }
 .home-note { margin-block-start: var(--space-3); text-align: center; }
 
 /* ── 팝업 ─────────────────────── */
 .scrim {
-  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: var(--space-2);
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--space-2);
   background: var(--color-scrim); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   transition: opacity var(--dur-base) var(--ease), visibility 0s;
 }
@@ -258,53 +263,50 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .status-line--error { color: var(--color-error); font-weight: 600; }
 .status-line--strong { color: var(--color-text); font-weight: 700; }
 
-/* ── 캐릭터 ─────────────────────── */
-.ch-svg { display: block; overflow: visible; }
-.ch-svg .ch-fill { fill: var(--ch, var(--ch-1)); stroke: var(--color-ink); stroke-width: 3; stroke-linejoin: round; }
+/* ── 캐릭터: 픽셀 칸 18×16으로 그린 단순한 모양, 몸 색만 바뀜. 움직임은 부드럽게 ── */
+.ch-svg { display: block; overflow: visible; shape-rendering: crispEdges; }
+.ch-svg .ch-fill { fill: var(--ch, var(--ch-1)); stroke: var(--color-ink); stroke-width: 0.5px; paint-order: stroke; }
 .ch-svg .ch-ink { fill: var(--color-ink); }
-.ch-svg .ch-line { fill: none; stroke: var(--color-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.ch-svg .ch-shine { fill: #fff; opacity: 0.5; }
-.ch-svg .ch-cheek { fill: #fff; opacity: 0.35; }
-.ch-svg .ch-tear { fill: var(--tear); stroke: var(--color-ink); stroke-width: 2; }
-.ch-svg .ch-arm, .ch-svg .ch-foot, .ch-svg .ch-body-g { transform-box: fill-box; }
-.ch-svg .ch-arm-l { transform-origin: 80% 15%; }
-.ch-svg .ch-arm-r { transform-origin: 20% 15%; }
-.ch-svg .ch-foot { transform-origin: 50% 0%; }
+.ch-svg .ch-shine { fill: #fff; opacity: 0.55; }
+.ch-svg .ch-tear { fill: var(--tear); }
+.ch-svg .ch-shadow { fill: rgba(29, 29, 31, 0.12); shape-rendering: geometricPrecision; }
+.ch-svg .ch-arm, .ch-svg .ch-foot, .ch-svg .ch-body-g, .ch-svg .ch-eyes { transform-box: fill-box; }
 .ch-svg .ch-body-g { transform-origin: 50% 100%; }
-.ch-svg .f-happy, .ch-svg .f-sad, .ch-svg .f-wow, .ch-svg .ch-tear { display: none; }
+.ch-svg .ch-eyes { transform-origin: 50% 50%; }
+.ch-svg .f-happy, .ch-svg .f-sad, .ch-svg .f-wow { display: none; }
 .is-happy .ch-svg .f-normal, .is-sad .ch-svg .f-normal, .is-wow .ch-svg .f-normal { display: none; }
-.is-happy .ch-svg .f-happy { display: inline; }
-.is-sad .ch-svg .f-sad, .is-sad .ch-svg .ch-tear { display: inline; }
-.is-wow .ch-svg .f-wow { display: inline; }
+.is-happy .ch-svg .f-happy, .is-sad .ch-svg .f-sad, .is-wow .ch-svg .f-wow { display: inline; }
 
-@keyframes ch-idle { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.97) translateY(1px); } }
+@keyframes ch-idle { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(0.25px) scaleY(0.975); } }
+@keyframes ch-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
 @keyframes ch-jump {
   0% { transform: translateY(0) scale(1, 1); }
-  18% { transform: translateY(2px) scale(1.12, 0.86); }
-  45% { transform: translateY(-30px) scale(0.94, 1.08); }
-  75% { transform: translateY(0) scale(1.08, 0.92); }
+  16% { transform: translateY(1px) scale(1.1, 0.88); }
+  46% { transform: translateY(-26px) scale(0.95, 1.06); }
+  78% { transform: translateY(0) scale(1.06, 0.94); }
   100% { transform: translateY(0) scale(1, 1); }
 }
-@keyframes ch-wave { 0%, 100% { transform: rotate(-150deg); } 50% { transform: rotate(-110deg); } }
-@keyframes ch-wave-l { 0%, 100% { transform: rotate(150deg); } 50% { transform: rotate(110deg); } }
-@keyframes ch-step-l { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-4px) rotate(-12deg); } }
-@keyframes ch-step-r { 0%, 100% { transform: translateY(-4px) rotate(12deg); } 50% { transform: translateY(0) rotate(0); } }
+@keyframes ch-wave { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes ch-step-l { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+@keyframes ch-step-r { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(0); } }
 @keyframes ch-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes ch-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+.ch-svg .ch-body-g { animation: ch-idle 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.ch-svg .ch-eyes { animation: ch-blink 4.2s ease-in-out infinite; }
 
 .avatar { --ch: var(--ch-1); position: relative; display: grid; justify-items: center; inline-size: 96px; }
-.avatar-fig { position: relative; inline-size: 64px; block-size: 72px; cursor: pointer; }
+.avatar-fig { position: relative; inline-size: 64px; block-size: 57px; cursor: pointer; }
 .avatar-fig .ch-svg { inline-size: 100%; block-size: 100%; }
 .avatar-motion { inline-size: 100%; block-size: 100%; transform-origin: 50% 100%; }
 .avatar-flip { inline-size: 100%; block-size: 100%; transition: transform var(--dur-base) var(--ease); }
 .avatar.is-left .avatar-flip { transform: scaleX(-1); }
-.avatar .ch-body-g { animation: ch-idle 2.6s ease-in-out infinite; }
-.avatar.is-jump .avatar-motion { animation: ch-jump 620ms var(--ease-out); }
-.avatar.is-wave .ch-arm-r { animation: ch-wave 360ms ease-in-out 3; }
-.avatar.is-walk .ch-foot-l { animation: ch-step-l 360ms ease-in-out infinite; }
-.avatar.is-walk .ch-foot-r { animation: ch-step-r 360ms ease-in-out infinite; }
-.avatar.is-walk .avatar-motion { animation: ch-bounce 360ms ease-in-out infinite; }
+.avatar.is-jump .avatar-motion { animation: ch-jump 640ms cubic-bezier(0.33, 0, 0.2, 1); }
+.avatar.is-wave .ch-arm-r { animation: ch-wave 380ms cubic-bezier(0.45, 0, 0.55, 1) 3; }
+.avatar.is-walk .ch-foot-l { animation: ch-step-l 340ms ease-in-out infinite; }
+.avatar.is-walk .ch-foot-r { animation: ch-step-r 340ms ease-in-out infinite; }
+.avatar.is-walk .avatar-motion { animation: ch-bounce 340ms ease-in-out infinite; }
 .avatar.is-shake .avatar-motion { animation: ch-shake 300ms ease-in-out; }
+.avatar.is-out { opacity: 0.45; filter: grayscale(0.6); }
 .avatar-name {
   margin-block-start: 2px; max-inline-size: 120px; padding: 0 8px; border-radius: var(--radius-pill);
   font-size: var(--text-small); font-weight: 700; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -321,13 +323,30 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 }
 .bubble::after { content: ""; position: absolute; inset-block-start: 100%; inset-inline-start: 50%; inline-size: 12px; block-size: 12px; background: var(--color-bg); border: 2px solid var(--color-ink); border-top: 0; border-left: 0; transform: translate(-50%, -6px) rotate(45deg); }
 .bubble.is-out { animation: pop-out var(--dur-base) var(--ease) both; }
+/* 게임 중 입력 말풍선 */
+.type-bubble {
+  position: absolute; inset-block-end: calc(100% + 6px); inset-inline-start: 50%; z-index: 4; transform: translateX(-50%);
+  padding: 2px 10px; border: 2px solid var(--color-ink); border-radius: 10px; background: var(--color-bg);
+  font-size: 15px; font-weight: 700; line-height: 1.4; letter-spacing: -0.01em; white-space: nowrap; pointer-events: none;
+  transition: opacity 140ms var(--ease), transform 140ms var(--ease-out);
+}
+.type-bubble::after { content: ""; position: absolute; inset-block-start: 100%; inset-inline-start: 50%; inline-size: 8px; block-size: 8px; background: inherit; border: 2px solid var(--color-ink); border-top: 0; border-left: 0; transform: translate(-50%, -4px) rotate(45deg); }
+.type-bubble.is-empty { opacity: 0; transform: translateX(-50%) translateY(4px); }
+.type-bubble.is-bad { border-color: var(--color-error); color: var(--color-error); }
+.type-bubble.is-bad::after { border-color: var(--color-error); }
+.avatar.is-me .type-bubble { background: var(--color-brand); }
+.crowd { display: flex; flex-wrap: wrap; justify-content: center; align-items: end; gap: 46px var(--space-2); padding-block-start: 40px; }
+.crowd .avatar { inline-size: 88px; }
+.crowd.is-many .avatar { inline-size: 76px; }
+.crowd.is-many .avatar-fig { inline-size: 52px; block-size: 46px; }
+.crowd.is-many .type-bubble { font-size: 13px; }
 .emoji-float { inline-size: 44px; block-size: 44px; animation: emoji-float 1800ms var(--ease-out) both; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(6px) scale(0.9); } to { opacity: 1; transform: none; } }
 @keyframes pop-out { to { opacity: 0; transform: translateY(-6px) scale(0.96); } }
 @keyframes emoji-float { 0% { opacity: 0; transform: translateY(10px) scale(0.6); } 15% { opacity: 1; transform: translateY(0) scale(1.1); } 25% { transform: scale(1); } 80% { opacity: 1; transform: translateY(-16px); } 100% { opacity: 0; transform: translateY(-26px); } }
 .emoji-svg { display: block; inline-size: 100%; block-size: 100%; overflow: visible; }
 
-.mini-avatar { --ch: var(--ch-1); display: inline-block; inline-size: 32px; block-size: 36px; flex: none; }
+.mini-avatar { --ch: var(--ch-1); display: inline-block; inline-size: 32px; block-size: 28px; flex: none; }
 .mini-avatar .ch-svg { inline-size: 100%; block-size: 100%; }
 
 /* ── 대기실 ─────────────────────── */
@@ -336,7 +355,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .room-code { display: inline-flex; align-items: center; gap: 8px; }
 .room-code strong { font-size: 20px; letter-spacing: 0.14em; color: var(--color-text); }
 .stage {
-  position: relative; block-size: 560px; border-radius: var(--radius-tile); overflow: hidden;
+  position: relative; isolation: isolate; block-size: clamp(480px, calc(100vh - 140px), 760px); border-radius: var(--radius-tile); overflow: hidden;
   background:
     radial-gradient(circle at 1px 1px, rgba(29, 29, 31, 0.10) 1.2px, transparent 1.6px) 0 0 / 28px 28px,
     var(--color-surface);
@@ -384,10 +403,11 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .lobby-main-action .status-line { text-align: center; }
 
 /* ── 플레이 공통 ─────────────────── */
-.play { display: grid; gap: var(--space-3); }
+.play { display: grid; gap: var(--space-2); }
 .play-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-3); align-items: start; }
+.play-main { display: grid; gap: var(--space-3); min-inline-size: 0; }
 @media (max-width: 980px) { .play-layout { grid-template-columns: minmax(0, 1fr); } }
-.term-show { display: grid; justify-items: center; gap: 10px; text-align: center; min-block-size: 150px; align-content: center; }
+.term-show { display: grid; justify-items: center; gap: 8px; text-align: center; min-block-size: 110px; align-content: center; }
 .term-text { font-size: var(--text-term); font-weight: 700; line-height: 1.1; letter-spacing: -0.035em; }
 .term-text .word { white-space: nowrap; }
 .char { color: #8E8A84; transition: color 100ms linear; }
@@ -396,6 +416,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .char.is-bad { color: var(--color-error); text-decoration: underline; text-decoration-thickness: 4px; text-underline-offset: 0.1em; }
 .term-ko { font-size: 21px; font-weight: 600; color: var(--color-text-muted); min-block-size: 1.5em; }
 .term-next { font-size: var(--text-small); color: var(--color-quiet); min-block-size: 1.5em; }
+.term-sub { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 4px 16px; }
+.track ~ .term-show .term-text { font-size: clamp(40px, 4.6vw, 62px); }
 .typing-field { display: grid; gap: 10px; inline-size: 100%; max-inline-size: 720px; margin-inline: auto; }
 .typing-input {
   box-sizing: border-box; inline-size: 100%; min-block-size: 72px; padding: 0 var(--space-3);
@@ -426,16 +448,22 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .board-val { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* 카운트다운 */
-.countdown { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; align-content: center; gap: var(--space-2); background: rgba(255, 255, 255, 0.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); text-align: center; }
+.countdown { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; align-content: center; gap: var(--space-2); background: rgba(255, 255, 255, 0.82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); text-align: center; }
 .countdown-num { font-size: clamp(120px, 18vw, 220px); font-weight: 800; line-height: 1; letter-spacing: -0.06em; }
 .countdown-num.is-tick { animation: pop-in 300ms var(--ease-out); }
 .countdown-title { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
 .countdown .lang-hint { font-size: 18px; }
 
 /* 레이스 */
-.track { display: grid; gap: 6px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-tile); background: var(--color-surface); }
-.lane { --lane-h: 82px; display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: end; gap: var(--space-2); block-size: var(--lane-h); }
-.track.is-many .lane { --lane-h: 60px; }
+.track { isolation: isolate; display: grid; gap: 6px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-tile); background: var(--color-surface); }
+.lane { --lane-h: 74px; display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: end; gap: var(--space-2); block-size: var(--lane-h); }
+.track.is-many .lane { --lane-h: 62px; }
+.lane-runner .type-bubble { inset-inline-start: -6px; transform: none; font-size: 14px; }
+.lane-runner .type-bubble::after { inset-inline-start: 26px; }
+.lane-runner .type-bubble.is-empty { transform: translateY(4px); }
+.lane-runner .avatar.bub-end .type-bubble { inset-inline-start: auto; inset-inline-end: -6px; }
+.lane-runner .avatar.bub-end .type-bubble::after { inset-inline-start: auto; inset-inline-end: 18px; }
+.track.is-many .lane-runner .type-bubble { font-size: 12px; padding: 1px 8px; inset-block-end: calc(100% + 4px); }
 .lane + .lane { border-top: 1px solid var(--color-hairline); }
 .lane-name { align-self: center; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lane-name .text-small { display: block; font-weight: 500; line-height: 1.3; }
@@ -443,20 +471,22 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .lane-road { position: relative; block-size: 100%; }
 .lane-road::before { content: ""; position: absolute; inset-inline: 0; inset-block-end: 6px; block-size: 2px; background: repeating-linear-gradient(90deg, var(--color-border) 0 10px, transparent 10px 18px); opacity: 0.6; }
 .lane-finish { position: absolute; inset-inline-end: 0; inset-block: 4px 6px; inline-size: 10px; background: repeating-conic-gradient(var(--color-ink) 0 25%, var(--color-bg) 0 50%) 0 0 / 10px 10px; border-radius: 2px; }
-.lane-runner { position: absolute; inset-block-end: 6px; inline-size: 52px; block-size: 58px; transform: translateX(-50%); transition: left 420ms var(--ease-out); }
-.track.is-many .lane-runner { inline-size: 40px; block-size: 45px; }
+.lane-runner { position: absolute; inset-block-end: 6px; inline-size: 52px; block-size: 46px; transform: translateX(-50%); transition: left 420ms var(--ease-out); }
+.track.is-many .lane-runner { inline-size: 40px; block-size: 36px; }
 .lane-runner .avatar { inline-size: 100%; }
 .lane-runner .avatar-fig { inline-size: 100%; block-size: 100%; }
 .lane-place { position: absolute; inset-inline-end: 18px; inset-block-start: 4px; font-weight: 800; font-size: var(--text-small); }
 .grace-note { text-align: center; font-weight: 700; color: var(--color-error); min-block-size: 1.5em; }
 
 /* 떨어지는 용어 */
-.arena { position: relative; block-size: 520px; border-radius: var(--radius-tile); overflow: hidden; background: var(--color-surface); }
+.arena { position: relative; isolation: isolate; block-size: 500px; border-radius: var(--radius-tile); overflow: hidden; background: var(--color-surface); }
 .arena.is-hit-ground { animation: ground-flash 420ms var(--ease); }
 @keyframes ground-flash { 30% { box-shadow: inset 0 -60px 60px -40px rgba(196, 43, 28, 0.45); } }
 .arena-ground { position: absolute; inset-inline: 0; inset-block-end: 0; block-size: 70px; background: rgba(29, 29, 31, 0.05); border-top: 2px dashed var(--color-border); }
-.arena .avatar { position: absolute; inset-block-end: 4px; inset-inline-start: 24px; inline-size: 72px; }
-.arena .avatar-fig { inline-size: 52px; block-size: 58px; }
+.arena .avatar { position: absolute; inset-block-end: 4px; inline-size: 80px; transform: translateX(-50%); z-index: 2; }
+.arena.is-crowd .avatar:nth-of-type(even) .type-bubble { inset-block-end: calc(100% + 36px); }
+.arena.is-crowd .type-bubble { font-size: 13px; }
+.arena .avatar-fig { inline-size: 52px; block-size: 46px; }
 .fword {
   position: absolute; inset-block-start: 0; inset-inline-start: 0; padding: 6px 16px; border-radius: var(--radius-pill);
   background: var(--color-bg); border: 1px solid var(--color-border); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap;
@@ -480,8 +510,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .out-note strong { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; }
 
 /* 60초 */
-.sixty-stage { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-3); border-radius: var(--radius-tile); background: var(--color-surface); }
-.sixty-stage .avatar { inline-size: 96px; }
+.sixty-stage { display: grid; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-3) var(--space-3); border-radius: var(--radius-tile); background: var(--color-surface); }
 .sixty-big { font-size: var(--text-display); font-weight: 800; line-height: 0.95; letter-spacing: -0.06em; text-align: center; font-variant-numeric: tabular-nums; }
 .sixty-big.is-low { color: var(--color-error); }
 
@@ -490,7 +519,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .result-hero { display: grid; justify-items: center; text-align: center; gap: var(--space-2); }
 .result-hero h1 { font-size: var(--text-title); font-weight: 800; line-height: 1.1; letter-spacing: -0.04em; }
 .result-hero .avatar { inline-size: 110px; }
-.result-hero .avatar-fig { inline-size: 80px; block-size: 90px; }
+.result-hero .avatar-fig { inline-size: 88px; block-size: 78px; }
 .result-big { font-size: var(--text-display); font-weight: 800; line-height: 0.95; letter-spacing: -0.06em; font-variant-numeric: tabular-nums; }
 .result-unit { font-size: var(--text-stat); font-weight: 700; margin-inline-start: 10px; letter-spacing: -0.02em; }
 .new-record { display: inline-flex; padding: 4px 16px; border-radius: var(--radius-pill); background: var(--color-brand); border: 1px solid var(--color-text); font-weight: 800; animation: pop-in var(--dur-slow) var(--ease-out); }
@@ -510,14 +539,14 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .result-actions { justify-content: center; }
 
 /* 알림 */
-.toast-area { position: fixed; inset-block-end: 24px; inset-inline: 0; z-index: 40; display: grid; justify-items: center; gap: 8px; pointer-events: none; }
+.toast-area { position: fixed; inset-block-end: 24px; inset-inline: 0; z-index: 120; display: grid; justify-items: center; gap: 8px; pointer-events: none; }
 .toast { padding: 12px 22px; border-radius: var(--radius-pill); background: var(--color-ink); color: var(--color-on-ink); font-weight: 600; box-shadow: 0 14px 30px -14px rgba(29, 29, 31, 0.6); animation: fade-up var(--dur-base) var(--ease-out) both; }
 .toast.is-out { animation: pop-out var(--dur-base) var(--ease) both; }
 @keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .loading { padding-block: var(--space-8); text-align: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen .rise, .avatar .ch-body-g, .avatar.is-walk .avatar-motion, .avatar.is-walk .ch-foot-l, .avatar.is-walk .ch-foot-r { animation: none !important; }
+  .screen .rise, .ch-svg .ch-body-g, .ch-svg .ch-eyes, .avatar.is-walk .avatar-motion, .avatar.is-walk .ch-foot-l, .avatar.is-walk .ch-foot-r { animation: none !important; }
   .game-card, .button, .choice, .room-type, .scrim, .scrim .dialog, .lane-runner, .stage .avatar { transition: none; }
 }
 </style>
@@ -528,13 +557,14 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   <!-- 게임 목록 -->
   <section class="screen" id="scr-home" aria-labelledby="home-title">
     <div class="topbar">
-      <div class="topbar-info"><a class="home-link" href="./" lang="en">Lingo Loop</a><span class="dot" aria-hidden="true">·</span><span class="topbar-item">타자 게임</span></div>
-      <div class="topbar-actions"><button class="sound-btn" type="button" data-sound aria-pressed="true" aria-label="효과음"></button></div>
+      <div class="topbar-info"><a class="home-link" href="./" lang="en">Lingo Loop</a><span class="dot" aria-hidden="true">·</span><span class="topbar-item" lang="en">Match!</span></div>
+      <div class="topbar-actions"><button class="button button--small" type="button" id="name-btn">닉네임 설정</button><button class="sound-btn" type="button" data-sound aria-pressed="true" aria-label="효과음"></button></div>
     </div>
     <div class="hero rise">
       <div class="hero-cast" id="hero-cast" aria-hidden="true"></div>
-      <h1 id="home-title">타자 <span class="hero-accent">게임</span></h1>
+      <h1 id="home-title" lang="en">Lingo Loop <span class="hero-accent">Match!</span></h1>
       <p>배운 용어를 빠르게 치고, 컴퓨터나 친구와 겨뤄요.</p>
+      <p class="text-small hero-name" id="hero-name"></p>
     </div>
     <p class="status-line status-line--error" id="load-error" hidden></p>
     <div class="game-card-list rise rise-2" id="game-cards">
@@ -672,10 +702,6 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         <p class="text-small" id="room-sub">게임, 방 종류, 주제를 골라요</p>
       </div>
       <div class="dialog-body">
-        <div class="field" id="f-name">
-          <label class="field-label" for="room-name">닉네임 <span class="text-small">12자까지 · 캐릭터 아래에 보여요</span></label>
-          <input class="text-input" id="room-name" type="text" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="예: 숨">
-        </div>
         <div class="field">
           <span class="field-label" id="room-game-label">게임</span>
           <div class="choice-list" id="room-games" role="radiogroup" aria-labelledby="room-game-label"></div>
@@ -686,7 +712,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
           <div class="choice-list" id="room-bots" role="radiogroup" aria-label="컴퓨터 수" hidden></div>
         </div>
         <div class="field">
-          <span class="field-label">용어 주제 <span class="text-small">여러 개를 함께 고를 수 있어요</span></span>
+          <span class="field-label">용어 주제 <span class="text-small">여러 개를 함께 고를 수 있어요 · <button class="link-button" type="button" id="room-clear">전체 해제</button></span></span>
           <div id="room-topics"></div>
         </div>
       </div>
@@ -727,6 +753,23 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       <div class="dialog-foot">
         <span></span>
         <button class="button" type="button" id="multi-back">뒤로</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 닉네임 정하기 -->
+  <div class="scrim" id="dlg-name" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="name-title">
+      <div class="dialog-head">
+        <h2 id="name-title">닉네임 정하기</h2>
+        <p class="text-small">캐릭터 아래에 보여요 · 12자까지 · 한 번 정하면 다음에도 그대로 써요</p>
+      </div>
+      <label class="visually-hidden" for="name-input">닉네임</label>
+      <input class="text-input" id="name-input" type="text" maxlength="12" autocomplete="nickname" spellcheck="false" placeholder="예: 숨">
+      <p class="status-line" id="name-status" aria-live="polite"></p>
+      <div class="button-row" style="justify-content: flex-end;">
+        <button class="button" type="button" id="name-cancel">취소</button>
+        <button class="button button--primary" type="button" id="name-ok">확인</button>
       </div>
     </div>
   </div>
@@ -899,9 +942,9 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     var s = termSeq(cats, seed, 400), r = s.r, list = [], t = 800;
     for (var i = 0; i < s.list.length && t < MAX_MS; i++) {
       var sec = t / 1000, term = s.list[i];
-      var fall = Math.max(4200, 10500 - sec * 34) + term.en.length * 140;
+      var fall = Math.max(7000, 16500 - sec * 45) + term.en.length * 220;
       list.push({ i: i, term: term, at: Math.round(t), fall: Math.round(fall), x: r() });
-      t += Math.max(1300, 4000 - sec * 16) * (0.8 + r() * 0.4);
+      t += Math.max(1700, 4600 - sec * 16) * (0.8 + r() * 0.4);
     }
     return { drops: list };
   }
@@ -909,22 +952,24 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   // ── 컴퓨터 캐릭터 흉내 (시작할 때 한 판 전체를 미리 계산) ──
   function botTermMs(len, wpm, r) { return len / (wpm * 5 / 60) * 1000 * (0.85 + r() * 0.35) + 240; }
   function simBot(game, course, wpm, seed) {
-    var r = rng(seed), ev = [], t = 0, err = 0, chars = 0, combo = 0, maxCombo = 0, score = 0, correct = 0;
+    var r = rng(seed), ev = [], t = 0, err = 0, chars = 0, combo = 0, maxCombo = 0, score = 0, correct = 0, ty = [];
     if (game === "race") {
       var d = 0;
       course.terms.forEach(function (term) {
         var ms = botTermMs(term.en.length, wpm, r);
+        ty.push({ s: t, e: t + ms, d: ms, text: term.en });
         if (r() < 0.07) { ms += 700; err++; combo = 0; } else { combo++; }
         maxCombo = Math.max(maxCombo, combo);
         t += ms; d += term.en.length; correct++;
         ev.push({ at: t, dist: d, correct: correct, combo: combo });
       });
       chars = d;
-      return { ev: ev, doneAt: t, acc: chars / (chars + err * 2), maxCombo: maxCombo };
+      return { ev: ev, ty: ty, doneAt: t, acc: chars / (chars + err * 2), maxCombo: maxCombo };
     }
     if (game === "sixty") {
       for (var i = 0; i < course.terms.length; i++) {
         var term = course.terms[i], ms2 = botTermMs(term.en.length, wpm, r), wrong = r() < 0.07;
+        ty.push({ s: t, e: t + ms2 + (wrong ? 500 : 0), d: ms2, text: wrong ? term.en.slice(0, -1) + "x" : term.en, bad: wrong });
         t += ms2 + (wrong ? 500 : 0);
         if (t > SIXTY_MS) break;
         if (wrong) { combo = 0; err++; }
@@ -932,7 +977,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         maxCombo = Math.max(maxCombo, combo);
         ev.push({ at: t, score: score, combo: combo, correct: correct });
       }
-      return { ev: ev, acc: chars / (chars + err * 2 || 1), maxCombo: maxCombo };
+      return { ev: ev, ty: ty, acc: chars / (chars + err * 2 || 1), maxCombo: maxCombo };
     }
     // 떨어지는 용어: 순서대로 치다가, 바닥 전에 못 끝낼 용어는 놓침
     var free = 0, raw = [];
@@ -941,6 +986,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       var ms3 = botTermMs(w.term.en.length, wpm, r), wrong3 = r() < 0.06;
       if (wrong3) ms3 += 600;
       var fin = start + ms3;
+      if (start < ground) ty.push({ s: start, e: Math.min(fin, ground), d: ms3, text: w.term.en });
       if (fin <= ground) {
         free = fin;
         raw.push({ at: fin, hit: true, len: w.term.en.length, prog: (fin - w.at) / w.fall, wrong: wrong3 });
@@ -961,7 +1007,18 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       ev.push({ at: e.at, score: score, lives: lives, combo: combo, correct: correct });
       if (lives <= 0) { deadAt = e.at; break; }
     }
-    return { ev: ev, deadAt: deadAt, acc: chars / (chars + err * 2 || 1), maxCombo: maxCombo };
+    ty.sort(function (a, b) { return a.s - b.s; });
+    return { ev: ev, ty: ty, deadAt: deadAt, acc: chars / (chars + err * 2 || 1), maxCombo: maxCombo };
+  }
+  // 컴퓨터가 지금 치고 있는 글자 (한 글자씩 늘어남)
+  function botTyping(b, at) {
+    var ty = b.sim.ty || [];
+    for (var i = 0; i < ty.length; i++) {
+      var g = ty[i];
+      if (g.s > at) break;
+      if (at < g.e) return { text: g.text.slice(0, Math.min(g.text.length, Math.ceil(g.text.length * (at - g.s) / g.d))), bad: !!g.bad && at - g.s > g.d * 0.9 };
+    }
+    return { text: "", bad: false };
   }
   function botState(b, at) {
     var last = null;
@@ -1024,22 +1081,21 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 
   // ── 캐릭터 그림 (모두 같은 모양, 몸 색만 바뀜) ──
   function charSVG() {
-    return '<svg class="ch-svg" viewBox="0 0 64 72" aria-hidden="true" focusable="false">' +
-      '<ellipse cx="32" cy="69" rx="17" ry="2.6" fill="rgba(29,29,31,0.12)"/>' +
-      '<g class="ch-foot ch-foot-l"><ellipse class="ch-fill" cx="23" cy="63" rx="7" ry="4.6"/></g>' +
-      '<g class="ch-foot ch-foot-r"><ellipse class="ch-fill" cx="41" cy="63" rx="7" ry="4.6"/></g>' +
+    var px = function (x, y, w, h, cls) { return '<rect class="' + cls + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"/>'; };
+    return '<svg class="ch-svg" viewBox="0 0 18 16" aria-hidden="true" focusable="false">' +
+      '<ellipse class="ch-shadow" cx="9" cy="15.2" rx="6" ry="0.6"/>' +
+      '<g class="ch-foot ch-foot-l">' + px(4, 11, 1, 2.6, "ch-fill") + px(6, 11, 1, 2.6, "ch-fill") + "</g>" +
+      '<g class="ch-foot ch-foot-r">' + px(11, 11, 1, 2.6, "ch-fill") + px(13, 11, 1, 2.6, "ch-fill") + "</g>" +
       '<g class="ch-body-g">' +
-        '<g class="ch-arm ch-arm-l"><ellipse class="ch-fill" cx="8.5" cy="40" rx="4.6" ry="7.4"/></g>' +
-        '<g class="ch-arm ch-arm-r"><ellipse class="ch-fill" cx="55.5" cy="40" rx="4.6" ry="7.4"/></g>' +
-        '<path class="ch-fill" d="M32 7C49 7 57 19 57 36c0 16-10 25.5-25 25.5S7 52 7 36C7 19 15 7 32 7z"/>' +
-        '<ellipse class="ch-shine" cx="22" cy="17.5" rx="6.5" ry="3.4" transform="rotate(-20 22 17.5)"/>' +
-        '<ellipse class="ch-cheek" cx="16.5" cy="40.5" rx="3.8" ry="2.4"/><ellipse class="ch-cheek" cx="47.5" cy="40.5" rx="3.8" ry="2.4"/>' +
-        '<g class="f-normal"><ellipse class="ch-ink" cx="24.5" cy="32" rx="3" ry="4"/><ellipse class="ch-ink" cx="39.5" cy="32" rx="3" ry="4"/><path class="ch-line" d="M28.5 41.5q3.5 3 7 0"/></g>' +
-        '<g class="f-happy"><path class="ch-line" d="M20.5 33q4-5.5 8 0M35.5 33q4-5.5 8 0"/><path class="ch-ink" d="M26.5 39.5h11q-.5 7-5.5 7t-5.5-7z"/></g>' +
-        '<g class="f-sad"><path class="ch-line" d="M20.5 30.5q4 3 8 0M35.5 30.5q4 3 8 0"/><path class="ch-line" d="M28 44q4-4 8 0"/></g>' +
-        '<g class="f-wow"><circle class="ch-ink" cx="24.5" cy="31.5" r="3.6"/><circle class="ch-ink" cx="39.5" cy="31.5" r="3.6"/><ellipse class="ch-ink" cx="32" cy="43" rx="3.4" ry="4.2"/></g>' +
-        '<path class="ch-tear" d="M20 35.5q-2.6 4.2 0 5.6q2.6-1.4 0-5.6z"/>' +
-      '</g></svg>';
+        '<g class="ch-arm ch-arm-l">' + px(1, 6, 2, 2, "ch-fill") + "</g>" +
+        '<g class="ch-arm ch-arm-r">' + px(15, 6, 2, 2, "ch-fill") + "</g>" +
+        px(3, 3, 12, 8, "ch-fill") + px(4, 4, 1, 1, "ch-shine") +
+        '<g class="f-normal ch-eyes">' + px(6, 5, 1, 2, "ch-ink") + px(11, 5, 1, 2, "ch-ink") + "</g>" +
+        '<g class="f-happy">' + px(5, 6, 1, 1, "ch-ink") + px(6, 5, 1, 1, "ch-ink") + px(7, 6, 1, 1, "ch-ink") +
+          px(10, 6, 1, 1, "ch-ink") + px(11, 5, 1, 1, "ch-ink") + px(12, 6, 1, 1, "ch-ink") + px(8, 8, 2, 1, "ch-ink") + "</g>" +
+        '<g class="f-sad">' + px(5, 6, 2, 1, "ch-ink") + px(11, 6, 2, 1, "ch-ink") + px(6, 7, 1, 1.5, "ch-tear") + px(8, 9, 2, 1, "ch-ink") + "</g>" +
+        '<g class="f-wow">' + px(5, 5, 2, 2, "ch-ink") + px(11, 5, 2, 2, "ch-ink") + px(8, 8, 2, 2, "ch-ink") + "</g>" +
+      "</g></svg>";
   }
   function makeAvatar(p, opts) {
     opts = opts || {};
@@ -1049,6 +1105,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     var pop = el("div", "avatar-pop");
     var fig = el("div", "avatar-fig");
     fig.innerHTML = '<div class="avatar-motion"><div class="avatar-flip">' + charSVG() + "</div></div>";
+    if (opts.bubble) { a._bub = el("div", "type-bubble is-empty"); a._bub.lang = "en"; a._bub.setAttribute("aria-hidden", "true"); fig.appendChild(a._bub); }
     a.appendChild(pop); a.appendChild(fig);
     if (!opts.noName) {
       var nm = el("div", "avatar-name", p.name || "");
@@ -1250,12 +1307,12 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   function show(name) {
     screen = name;
     Object.keys(SCREENS).forEach(function (k) { $(SCREENS[k]).hidden = k !== name; });
-    document.title = (name === "lobby" ? "대기실" : name === "play" && G ? GAMES[G.game].name : name === "result" ? "결과" : "타자 게임") + " · Lingo Loop";
+    document.title = (name === "lobby" ? "대기실" : name === "play" && G ? GAMES[G.game].name : name === "result" ? "결과" : "") + (name === "home" ? "Lingo Loop Match!" : " · Lingo Loop Match!");
     window.scrollTo(0, 0);
   }
   var openDialog = null;
   function setDialog(id) {
-    ["dlg-room", "dlg-multi", "dlg-confirm"].forEach(function (d) { $(d).hidden = d !== id; });
+    ["dlg-room", "dlg-multi", "dlg-confirm", "dlg-name"].forEach(function (d) { $(d).hidden = d !== id; });
     openDialog = id;
     Object.keys(SCREENS).forEach(function (k) { if (id) $(SCREENS[k]).setAttribute("inert", ""); else $(SCREENS[k]).removeAttribute("inert"); });
   }
@@ -1291,6 +1348,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       if (i === 1) w.className = "is-happy";
       cast.appendChild(w);
     });
+    $("hero-name").textContent = settings.name ? "내 닉네임 · " + settings.name : "닉네임은 방에 들어가기 전에 정해요";
+    $("name-btn").textContent = settings.name ? "닉네임 바꾸기" : "닉네임 설정";
     GAME_ORDER.forEach(function (g) { var b = document.querySelector('[data-best="' + g + '"]'); if (b) b.textContent = bestText(g); });
     var race = document.querySelector('[data-art="race"]');
     if (!race.childNodes.length) {
@@ -1323,13 +1382,11 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (mode === "edit") roomDraft.game = Room.meta.game;
     $("room-title").textContent = mode === "edit" ? "게임·주제 바꾸기" : "방 만들기";
     $("room-sub").textContent = mode === "edit" ? "바꾸면 모두의 준비 완료가 풀려요" : "게임, 방 종류, 주제를 골라요";
-    $("f-name").hidden = mode === "edit";
     $("f-type").hidden = mode === "edit";
-    $("room-name").value = settings.name;
     $("room-next").textContent = mode === "edit" ? "바꾸기" : "다음";
     renderRoomDialog();
     setDialog("dlg-room");
-    setTimeout(function () { (mode === "create" && !settings.name ? $("room-name") : $("room-next").disabled ? $("room-topics").querySelector(".choice") : $("room-next")).focus(); }, 30);
+    setTimeout(function () { ($("room-next").disabled ? $("room-topics").querySelector(".choice") : $("room-next")).focus(); }, 30);
   }
   function radio(list, items, current, attr) {
     list.innerHTML = "";
@@ -1388,13 +1445,12 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   }
   function validateRoom() {
     var d = roomDraft, miss = [];
-    var name = cleanText($("room-name").value).trim();
-    if (d.mode === "create" && !name) miss.push("닉네임");
     var n = termsFor(d.cats).length;
     if (!n) miss.push("주제");
     $("room-next").disabled = miss.length > 0;
+    $("room-clear").disabled = !d.cats.length;
     var st = $("room-status");
-    if (miss.length) { st.className = "status-line"; st.textContent = miss.join(", ") + "을(를) 정해 주세요."; }
+    if (miss.length) { st.className = "status-line"; st.textContent = "용어 주제를 하나 이상 골라 주세요."; }
     else { st.className = "status-line status-line--strong"; st.textContent = topicLabel(d.cats) + " · 용어 " + n + "개"; }
   }
   function radioKeys(list, attr, onPick) {
@@ -1426,8 +1482,38 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     }
     renderTopicChips(); validateRoom();
   });
-  $("room-name").addEventListener("input", validateRoom);
-  $("room-name").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing && !$("room-next").disabled) $("room-next").click(); });
+  $("room-clear").addEventListener("click", function () { roomDraft.cats = []; renderTopicChips(); validateRoom(); });
+
+  // ── 닉네임: 방에 들어가기 직전에 한 번만 묻고, 게임 목록 화면에서 바꿀 수 있음 ──
+  var nameNext = null, nameBack = null;
+  function openNameDialog(next, back) {
+    nameNext = next || null; nameBack = back || null;
+    $("name-input").value = settings.name || "";
+    $("name-status").textContent = ""; $("name-status").className = "status-line";
+    $("name-ok").textContent = next ? "확인하고 들어가기" : "저장";
+    setDialog("dlg-name");
+    setTimeout(function () { $("name-input").focus(); $("name-input").select(); }, 30);
+  }
+  function ensureName(next, back) { if (settings.name) next(); else openNameDialog(next, back); }
+  function closeNameDialog(ok) {
+    if (ok) {
+      var v = cleanText($("name-input").value).trim().slice(0, NAME_MAX);
+      if (!v) { $("name-status").className = "status-line status-line--error"; $("name-status").textContent = "닉네임을 넣어 주세요."; $("name-input").focus(); return; }
+      settings.name = v; saveSettings(); renderHome();
+      var n = nameNext; nameNext = nameBack = null;
+      setDialog(null);
+      if (n) n(); else { toast("닉네임을 " + v + "(으)로 정했어요"); $("name-btn").focus(); }
+    } else {
+      var b = nameBack; nameNext = nameBack = null;
+      setDialog(null);
+      if (b) b(); else $("name-btn").focus();
+    }
+  }
+  $("name-ok").addEventListener("click", function () { closeNameDialog(true); });
+  $("name-cancel").addEventListener("click", function () { closeNameDialog(false); });
+  $("name-input").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); closeNameDialog(true); } });
+  $("dlg-name").addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); closeNameDialog(false); } else trapTab($("dlg-name"), e); });
+  $("name-btn").addEventListener("click", function () { openNameDialog(null, null); });
   $("room-cancel").addEventListener("click", function () { closeRoomDialog(); });
   function closeRoomDialog() {
     var mode = roomDraft && roomDraft.mode;
@@ -1444,12 +1530,11 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     var d = roomDraft;
     if ($("room-next").disabled) return;
     if (d.mode === "edit") { setDialog(null); Room.changeGame(d.game, d.cats); $("chat-input").focus(); return; }
-    settings.name = cleanText($("room-name").value).trim().slice(0, NAME_MAX);
     settings.game = d.game; settings.roomType = d.roomType; settings.bots = d.bots; settings.cats = d.cats.slice();
     saveSettings();
     if (d.roomType === "multi") { openMultiDialog(); return; }
     setDialog(null);
-    startLocalGame();
+    ensureName(startLocalGame, function () { openRoomDialog("create", settings.game); });
   });
 
   // ── 멀티: 방 만들기 / 방 코드로 참가 ─────────────
@@ -1476,6 +1561,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   });
   $("multi-code").addEventListener("keydown", function (e) { if (e.key === "Enter" && !e.isComposing) $("multi-join").click(); });
   $("multi-create").addEventListener("click", function () {
+    if (!settings.name) { openNameDialog(function () { openMultiDialog(); $("multi-create").click(); }, function () { openMultiDialog(); }); return; }
     multiBusy(true);
     getNet().then(function () { return Room.create(); }).then(function () { multiBusy(false); setDialog(null); })
       .catch(function (err) { multiBusy(false); multiError(err && err.userMsg || "방을 만들지 못했어요. 다시 시도해 주세요."); });
@@ -1483,6 +1569,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   $("multi-join").addEventListener("click", function () {
     var code = $("multi-code").value.trim().toUpperCase();
     if (code.length !== 5) { $("multi-code").setAttribute("aria-invalid", "true"); multiError("방 코드 5자리를 넣어 주세요."); $("multi-code").focus(); return; }
+    if (!settings.name) { openNameDialog(function () { openMultiDialog(code); $("multi-join").click(); }, function () { openMultiDialog(code); }); return; }
     multiBusy(true);
     getNet().then(function () { return Room.join(code); }).then(function () { multiBusy(false); setDialog(null); })
       .catch(function (err) { multiBusy(false); $("multi-code").setAttribute("aria-invalid", "true"); multiError(err && err.userMsg || "들어가지 못했어요. 다시 시도해 주세요."); });
@@ -2005,9 +2092,11 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 
   // 화면 짜기
   function buildPlayUI() {
-    var body = $("play-body"); body.innerHTML = "";
+    var body = $("play-body"), tf = $("typing-field");
+    $("scr-play").appendChild(tf);
+    body.innerHTML = "";
     G.ui = {};
-    var me = G.me;
+    var me = G.me, many = G.players.length > 4;
     if (G.game === "race") {
       var track = el("div", "track" + (G.players.length > 5 ? " is-many" : ""));
       G.players.forEach(function (p) {
@@ -2017,7 +2106,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         var road = el("div", "lane-road");
         road.appendChild(el("span", "lane-finish"));
         var run = el("div", "lane-runner");
-        var av = makeAvatar(p, { noName: true }); run.appendChild(av);
+        var av = makeAvatar(p, { noName: true, bubble: true }); run.appendChild(av);
         var place = el("span", "lane-place");
         road.appendChild(run); road.appendChild(place);
         lane.appendChild(nm); lane.appendChild(road); track.appendChild(lane);
@@ -2027,29 +2116,39 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       body.appendChild(track);
       var show = el("div", "term-show");
       show.appendChild(G.ui.term = el("p", "term-text")); G.ui.term.lang = "en";
-      show.appendChild(G.ui.ko = el("p", "term-ko"));
-      show.appendChild(G.ui.next = el("p", "term-next"));
+      var sub = el("div", "term-sub");
+      sub.appendChild(G.ui.ko = el("p", "term-ko"));
+      sub.appendChild(G.ui.next = el("p", "term-next"));
+      show.appendChild(sub);
       body.appendChild(show);
       body.appendChild(G.ui.grace = el("p", "grace-note"));
       G.ui.grace.setAttribute("aria-live", "polite");
     } else if (G.game === "falling") {
-      var lay = el("div", "play-layout");
-      var arena = el("div", "arena");
+      var lay = el("div", "play-layout"), main = el("div", "play-main");
+      var arena = el("div", "arena" + (many ? " is-crowd" : ""));
       arena.appendChild(el("div", "arena-ground"));
-      var av2 = makeAvatar(me); arena.appendChild(av2); me.ui = { av: av2 };
-      lay.appendChild(arena); G.ui.arena = arena;
+      G.players.forEach(function (p, i) {
+        var av2 = makeAvatar(p, { bubble: true });
+        av2.style.left = ((i + 0.5) / G.players.length * 100).toFixed(2) + "%";
+        arena.appendChild(av2); p.ui = { av: av2 };
+      });
+      main.appendChild(arena); main.appendChild(tf); G.ui.arena = arena;
+      lay.appendChild(main);
       lay.appendChild(G.ui.board = el("div", "board"));
       body.appendChild(lay);
     } else {
-      var lay2 = el("div", "play-layout");
+      var lay2 = el("div", "play-layout"), main2 = el("div", "play-main");
       var stage = el("div", "sixty-stage");
-      var av3 = makeAvatar(me); stage.appendChild(av3); me.ui = { av: av3 };
       var col = el("div", "term-show");
       col.appendChild(G.ui.big = el("p", "sixty-big", "60"));
       col.appendChild(G.ui.term = el("p", "term-text")); G.ui.term.lang = "en";
       col.appendChild(G.ui.ko = el("p", "term-ko"));
       stage.appendChild(col);
-      lay2.appendChild(stage);
+      var crowd = el("div", "crowd" + (many ? " is-many" : ""));
+      G.players.forEach(function (p) { var av3 = makeAvatar(p, { bubble: true }); crowd.appendChild(av3); p.ui = { av: av3 }; });
+      stage.appendChild(crowd);
+      main2.appendChild(stage); main2.appendChild(tf);
+      lay2.appendChild(main2);
       lay2.appendChild(G.ui.board = el("div", "board"));
       body.appendChild(lay2);
     }
@@ -2289,7 +2388,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       return st;
     }
     var r = (G.remote || {})[p.id];
-    if (r) { Object.assign(p.st, { score: r.score || 0, dist: r.dist || 0, lives: r.lives != null ? r.lives : LIVES, combo: r.combo || 0, correct: r.correct || 0, done: !!r.done, doneAt: r.doneAt != null ? r.doneAt : null, acc: r.acc, maxCombo: r.maxCombo || 0, idx: r.idx || 0, wpm: r.wpm }); }
+    if (r) { Object.assign(p.st, { score: r.score || 0, dist: r.dist || 0, lives: r.lives != null ? r.lives : LIVES, combo: r.combo || 0, correct: r.correct || 0, done: !!r.done, doneAt: r.doneAt != null ? r.doneAt : null, acc: r.acc, maxCombo: r.maxCombo || 0, idx: r.idx || 0, wpm: r.wpm, typing: r.typing || "", tbad: !!r.tbad }); }
     return p.st;
   }
   function standings(elapsed, final) {
@@ -2321,9 +2420,9 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         var left = "calc(26px + (100% - 64px) * " + pct.toFixed(4) + ")";
         if (u._left !== left) {
           u.run.style.left = left; u._left = left;
-          if (!p.isMe && st.dist) { pulse(u.av, "is-jump", 650); }
         }
         u.av.classList.toggle("is-walk", pct > 0 && pct < 1 && G.phase === "play");
+        u.av.classList.toggle("bub-end", pct > 0.6);
         var rank = ranks.findIndex(function (x) { return x.p === p; }) + 1;
         u.place.textContent = st.done ? rank + "등 · " + fmtRace(st.doneAt) : "";
         if (st.done && !u._done) { u._done = true; face(u.av, "is-happy", 3000); }
@@ -2359,13 +2458,47 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   function syncMine(force) {
     if (!G || !G.multi || !Room.code) return;
     var t = performance.now();
-    if (!force && t - G.lastSync < 250) return;
-    G.lastSync = t;
-    var st = G.me.st, elapsed = nowMs() - G.startAt;
-    Net.set(Room.path("game/" + Net.uid), {
+    if (!force && t - G.lastSync < 150) return;
+    var st = G.me.st, elapsed = nowMs() - G.startAt, mine = myTyping();
+    var data = {
       score: st.score, dist: st.dist, lives: st.lives, combo: st.combo, maxCombo: st.maxCombo, correct: st.correct, idx: st.idx,
       done: st.done, doneAt: st.doneAt == null ? null : Math.round(st.doneAt), acc: +accOf(st).toFixed(4),
-      wpm: Math.round(wpmOf(st, activeMs(st, elapsed)))
+      typing: mine.text.slice(-30), tbad: mine.bad
+    };
+    // 바뀐 게 있을 때만 올림 (속도 값은 계속 바뀌므로 비교에서 뺌)
+    var key = JSON.stringify(data);
+    if (!force && key === G.lastKey) return;
+    G.lastSync = t; G.lastKey = key;
+    data.wpm = Math.round(wpmOf(st, activeMs(st, elapsed)));
+    Net.set(Room.path("game/" + Net.uid), data);
+  }
+  // 말풍선과 다른 사람 반응
+  function myTyping() {
+    if (!G || G.phase !== "play" || G.me.st.done) return { text: "", bad: false };
+    return { text: inp.value, bad: inp.getAttribute("aria-invalid") === "true" };
+  }
+  function shortText(s, n) { s = String(s || ""); return s.length > n ? "…" + s.slice(-(n - 1)) : s; }
+  function setBubble(av, text, bad) {
+    var b = av && av._bub; if (!b) return;
+    var n = G.game === "race" ? 20 : G.players.length > 4 ? 12 : 18;
+    var t = shortText(text, n);
+    if (b._t !== t) { b._t = t; b.textContent = t || " "; b.classList.toggle("is-empty", !t); }
+    if (b._bad !== !!bad) { b._bad = !!bad; b.classList.toggle("is-bad", !!bad); }
+  }
+  function updateCrowd(elapsed) {
+    G.players.forEach(function (p) {
+      var av = p.ui && p.ui.av; if (!av) return;
+      var st = p.st, ty;
+      if (p.isMe) ty = myTyping();
+      else if (p.isBot) { playerVals(p, elapsed); ty = st.done || G.phase !== "play" ? { text: "", bad: false } : botTyping(p, elapsed); }
+      else { playerVals(p, elapsed); ty = st.done || !G.remoteAlive(p.id) ? { text: "", bad: false } : { text: cleanText(st.typing), bad: st.tbad }; }
+      setBubble(av, ty.text, ty.bad);
+      if (G.game === "falling") av.classList.toggle("is-out", !!st.done || (p.isRemote && !G.remoteAlive(p.id)));
+      if (p.isMe) return;
+      if (p._c == null) { p._c = st.correct || 0; p._l = st.lives; }
+      if ((st.correct || 0) > p._c) { pulse(av, "is-jump", 650); face(av, "is-happy", 700); }
+      if (st.lives != null && p._l != null && st.lives < p._l) { face(av, "is-sad", 1000); pulse(av, "is-shake", 320); }
+      p._c = st.correct || 0; p._l = st.lives;
     });
   }
   function syncRoster() { if (G && G.ui && G.game !== "race") G.ui.board._key = null; }
@@ -2440,6 +2573,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       if (G.ui.grace.textContent !== msg) G.ui.grace.textContent = msg;
     }
     renderBoard(elapsed);
+    updateCrowd(elapsed);
     syncMine(false);
     var end = overAt(elapsed);
     if (end != null) { finishGame(end); return; }
