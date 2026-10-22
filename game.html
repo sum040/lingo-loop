@@ -268,6 +268,9 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .ch-svg .ch-fill { fill: var(--ch, var(--ch-1)); stroke: var(--color-ink); stroke-width: 0.5px; paint-order: stroke; }
 .ch-svg .ch-ink { fill: var(--color-ink); }
 .ch-svg .ch-shine { fill: #fff; opacity: 0.55; }
+.ch-svg .ch-face { fill: #F7E6CF; stroke: var(--color-ink); stroke-width: 0.35px; paint-order: stroke; }
+.ch-svg .ch-tail { transform-box: fill-box; transform-origin: 0% 50%; animation: ch-tail 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+@keyframes ch-tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-8deg); } }
 .ch-svg .ch-tear { fill: var(--tear); }
 .ch-svg .ch-shadow { fill: rgba(29, 29, 31, 0.12); shape-rendering: geometricPrecision; }
 .ch-svg .ch-arm, .ch-svg .ch-foot, .ch-svg .ch-body-g, .ch-svg .ch-eyes { transform-box: fill-box; }
@@ -546,7 +549,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .loading { padding-block: var(--space-8); text-align: center; }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen .rise, .ch-svg .ch-body-g, .ch-svg .ch-eyes, .avatar.is-walk .avatar-motion, .avatar.is-walk .ch-foot-l, .avatar.is-walk .ch-foot-r { animation: none !important; }
+  .screen .rise, .ch-svg .ch-body-g, .ch-svg .ch-eyes, .ch-svg .ch-tail, .avatar.is-walk .avatar-motion, .avatar.is-walk .ch-foot-l, .avatar.is-walk .ch-foot-r { animation: none !important; }
   .game-card, .button, .choice, .room-type, .scrim, .scrim .dialog, .lane-runner, .stage .avatar { transition: none; }
 }
 </style>
@@ -1080,19 +1083,23 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   document.addEventListener("keydown", function () { Sound.unlock(); }, { capture: true });
 
   // ── 캐릭터 그림 (모두 같은 모양, 몸 색만 바뀜) ──
+  // 원숭이: 귀, 밝은 얼굴, 꼬리를 픽셀 칸으로 단순하게
   function charSVG() {
     var px = function (x, y, w, h, cls) { return '<rect class="' + cls + '" x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '"/>'; };
     return '<svg class="ch-svg" viewBox="0 0 18 16" aria-hidden="true" focusable="false">' +
       '<ellipse class="ch-shadow" cx="9" cy="15.2" rx="6" ry="0.6"/>' +
+      '<g class="ch-tail"><path class="ch-fill" fill-rule="evenodd" d="M16 10H18V13H15V11H16ZM16 11V12H17V11Z"/></g>' +
       '<g class="ch-foot ch-foot-l">' + px(4, 11, 1, 2.6, "ch-fill") + px(6, 11, 1, 2.6, "ch-fill") + "</g>" +
       '<g class="ch-foot ch-foot-r">' + px(11, 11, 1, 2.6, "ch-fill") + px(13, 11, 1, 2.6, "ch-fill") + "</g>" +
       '<g class="ch-body-g">' +
-        '<g class="ch-arm ch-arm-l">' + px(1, 6, 2, 2, "ch-fill") + "</g>" +
-        '<g class="ch-arm ch-arm-r">' + px(15, 6, 2, 2, "ch-fill") + "</g>" +
-        px(3, 3, 12, 8, "ch-fill") + px(4, 4, 1, 1, "ch-shine") +
-        '<g class="f-normal ch-eyes">' + px(6, 5, 1, 2, "ch-ink") + px(11, 5, 1, 2, "ch-ink") + "</g>" +
+        '<g class="ch-arm ch-arm-l">' + px(1, 7, 2, 2, "ch-fill") + "</g>" +
+        '<g class="ch-arm ch-arm-r">' + px(15, 7, 2, 2, "ch-fill") + "</g>" +
+        px(0, 3, 3, 3, "ch-fill") + px(15, 3, 3, 3, "ch-fill") + px(1, 4, 1, 1, "ch-face") + px(16, 4, 1, 1, "ch-face") +
+        px(3, 2, 12, 9, "ch-fill") + px(8, 1, 2, 1, "ch-fill") + px(4, 3, 1, 1, "ch-shine") +
+        px(5, 4, 3, 3, "ch-face") + px(10, 4, 3, 3, "ch-face") + px(5, 7, 8, 3, "ch-face") +
+        '<g class="f-normal"><g class="ch-eyes">' + px(6, 5, 1, 2, "ch-ink") + px(11, 5, 1, 2, "ch-ink") + "</g>" + px(8, 8, 2, 1, "ch-ink") + "</g>" +
         '<g class="f-happy">' + px(5, 6, 1, 1, "ch-ink") + px(6, 5, 1, 1, "ch-ink") + px(7, 6, 1, 1, "ch-ink") +
-          px(10, 6, 1, 1, "ch-ink") + px(11, 5, 1, 1, "ch-ink") + px(12, 6, 1, 1, "ch-ink") + px(8, 8, 2, 1, "ch-ink") + "</g>" +
+          px(10, 6, 1, 1, "ch-ink") + px(11, 5, 1, 1, "ch-ink") + px(12, 6, 1, 1, "ch-ink") + px(7, 8, 4, 1, "ch-ink") + "</g>" +
         '<g class="f-sad">' + px(5, 6, 2, 1, "ch-ink") + px(11, 6, 2, 1, "ch-ink") + px(6, 7, 1, 1.5, "ch-tear") + px(8, 9, 2, 1, "ch-ink") + "</g>" +
         '<g class="f-wow">' + px(5, 5, 2, 2, "ch-ink") + px(11, 5, 2, 2, "ch-ink") + px(8, 8, 2, 2, "ch-ink") + "</g>" +
       "</g></svg>";
