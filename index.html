@@ -44,8 +44,8 @@
 
   /* 크기: 히어로는 크게, 가장 작은 글자는 16px 유지 */
   --text-hero: clamp(44px, 6.6vw, 88px);
-  --text-display: clamp(96px, 14vw, 176px);
-  --text-term: clamp(44px, 7vw, 88px);
+  --text-display: clamp(72px, min(14vw, 19vh), 176px);  /* 낮은 화면에서도 결과가 한 화면에 들어오게 높이도 봄 */
+  --text-term: clamp(40px, min(7vw, 10vh), 88px);
   --text-title: clamp(40px, 5vw, 64px);
   --text-lede: clamp(19px, 1.8vw, 24px);
   --text-input: clamp(26px, 3vw, 36px);
@@ -356,6 +356,35 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .term-sub-name { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
 .term-sub-desc { font-size: 21px; line-height: 1.5; font-weight: 500; }
 
+/* 뜻 고르기: 4지 선다 보기 */
+.practice.is-quiz .typing-field { display: none; }
+.practice.is-quiz { gap: var(--space-3); padding-block-start: max(4vh, calc(50vh - 300px)); padding-block-end: var(--space-4); }
+.practice.is-quiz .term, .practice.is-quiz .term-sub { min-block-size: 0; }
+.practice > .status-line { text-align: center; min-block-size: 1.5em; margin: 0; font-weight: 600; }
+.choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; inline-size: 100%; max-inline-size: 760px; margin-inline: auto; }
+@media (max-width: 600px) { .choice-list { grid-template-columns: minmax(0, 1fr); } }
+.choice {
+  display: flex; align-items: center; gap: 14px; min-block-size: 72px; padding: 12px 20px; text-align: start;
+  border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-bg); color: var(--color-text);
+  font: inherit; font-size: 20px; font-weight: 600; line-height: 1.35; letter-spacing: -0.02em; cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease), background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease);
+  animation: fade-up var(--dur-base) var(--ease-out) both;
+}
+.choice:nth-child(2) { animation-delay: 40ms; } .choice:nth-child(3) { animation-delay: 80ms; } .choice:nth-child(4) { animation-delay: 120ms; }
+.choice:hover:not([aria-disabled="true"]) { border-color: var(--color-text); background: var(--color-surface); }
+.choice:active:not([aria-disabled="true"]) { transform: var(--press); }
+.choice[aria-disabled="true"] { cursor: default; }
+.choice-num {
+  display: inline-grid; place-items: center; flex: none; inline-size: 30px; block-size: 30px; border-radius: 8px;
+  border: 1px solid currentColor; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--color-text-muted);
+}
+.choice.is-correct { background: var(--color-brand); border-color: var(--color-text); color: var(--color-text); }
+.choice.is-correct .choice-num { color: var(--color-text); }
+.choice.is-picked-wrong { border-color: var(--color-error); color: var(--color-error); }
+.choice.is-picked-wrong .choice-num { color: var(--color-error); }
+.choice.is-dim { opacity: 0.45; }
+@media (prefers-reduced-motion: reduce) { .choice { transition: none; animation: none; } .choice:active { transform: none; } }
+
 /* 입력 언어 미리 표시 */
 .lang-hint {
   justify-self: center; display: inline-flex; align-items: center; gap: 10px;
@@ -385,6 +414,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 }
 .dialog--topics { max-inline-size: 760px; max-block-size: calc(100vh - 48px); grid-template-rows: auto minmax(0, 1fr) auto; gap: var(--space-3); }
 .topics-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.topic-bulk { display: flex; flex: none; gap: 14px; }
 .topic-clear { flex: none; white-space: nowrap; }
 .topic-all:disabled { opacity: 0.4; text-decoration: none; cursor: not-allowed; }
 .topics-head h2 { margin: 0 0 6px; font-size: 28px; font-weight: 800; letter-spacing: -0.03em; }
@@ -427,6 +457,13 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .wrong-skip { color: var(--color-text-muted); }
 .dot { color: var(--color-text-muted); }
 .result-actions { justify-content: center; }
+/* 낮은 화면: 결과 화면 간격을 줄여 버튼까지 한 화면에 */
+@media (max-height: 900px) {
+  #s3 .stack { gap: var(--space-4); }
+  #s3 { padding-block: var(--space-4); }
+  .result-hero { padding-block-start: 0; gap: var(--space-1); }
+  .stat-tile { padding: var(--space-3); }
+}
 /* ── 인터랙션 (움직임 토큰 공통 적용) ───────────── */
 .button, .chip, .glossary-toggle, .domain-tab, .topic-all, .home-link {
   transition: transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease),
@@ -514,6 +551,15 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   .gb-word:nth-child(1), .gb-word:nth-child(3) { display: none; }
   .gb-word:nth-child(2) { inset-block-start: 22px; inset-inline-end: 20px; }
 }
+@media (max-height: 900px) and (min-width: 861px) {
+  .game-box { min-block-size: 0; padding: 26px 40px; gap: var(--space-3); }
+  .game-box-name { font-size: clamp(38px, 4.6vw, 58px); }
+  .game-box-desc { font-size: 16px; }
+  .gb-go { margin-block-start: 0; }
+  .gb-ch { inline-size: 64px; block-size: 57px; }
+  .gb-ch.is-big { inline-size: 84px; block-size: 75px; }
+  .gb-word:nth-child(3) { display: none; }
+}
 @media (prefers-reduced-motion: reduce) { .game-box, .gb-arrow { transition: none; } .gb-body, .gb-eyes, .gb-word, .gb-kicker::before, .game-box:hover .gb-ch { animation: none; } }
 </style>
 </head>
@@ -553,19 +599,16 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
             <span class="mode-card-name">영어 따라 치기</span>
             <span class="mode-card-desc">보이는 영어 용어를 그대로 쳐요</span>
             <span class="mode-card-example">Persona <span class="arrow">→</span> Persona</span>
-            <span class="mode-card-meta text-small"><kbd class="kbd">1</kbd></span>
           </button>
           <button class="mode-card" type="button" data-mode="ko_copy">
             <span class="mode-card-name">한국어 따라 치기</span>
             <span class="mode-card-desc">보이는 한국어 용어를 그대로 쳐요</span>
             <span class="mode-card-example">페르소나 <span class="arrow">→</span> 페르소나</span>
-            <span class="mode-card-meta text-small"><kbd class="kbd">2</kbd></span>
           </button>
           <button class="mode-card" type="button" data-mode="ko_recall">
-            <span class="mode-card-name">한국어 뜻 연습</span>
-            <span class="mode-card-desc">영어 용어를 보고 한국어를 떠올려 쳐요</span>
-            <span class="mode-card-example">Persona <span class="arrow">→</span> ?</span>
-            <span class="mode-card-meta text-small"><kbd class="kbd">3</kbd></span>
+            <span class="mode-card-name">한국어 뜻 고르기</span>
+            <span class="mode-card-desc">영어 용어를 보고 맞는 한국어를 4개 중에 골라요</span>
+            <span class="mode-card-example">Persona <span class="arrow">→</span> 4지 선다</span>
           </button>
         </div>
       </section>
@@ -611,6 +654,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
           <p class="term-sub-desc" id="term-sub-desc"></p>
         </div>
       </div>
+      <div class="choice-list" id="choice-list" role="group" aria-label="보기" hidden></div>
       <div class="typing-field">
         <p class="lang-hint" id="lang-hint" hidden><span class="lang-key" id="lang-key" aria-hidden="true">A</span><span id="lang-text"></span></p>
         <input class="typing-input" id="typing-input" type="text" autocomplete="off" autocorrect="off"
@@ -636,14 +680,14 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         <div class="stat-tile"><span class="stat-label">정확도</span><span class="stat-value" id="r-acc"></span></div>
         <div class="stat-tile"><span class="stat-label">걸린 시간</span><span class="stat-value" id="r-time"></span></div>
       </div>
-      <section class="section rise rise-3" aria-labelledby="wrong-title">
-        <h2 id="wrong-title">틀린 용어</h2>
-        <div class="panel" id="wrong-box"></div>
-      </section>
       <div class="button-row result-actions">
         <button class="button button--primary button--big" type="button" id="again-btn">다시 하기 <kbd class="kbd">Enter</kbd></button>
         <button class="button button--secondary" type="button" id="home-btn">처음으로</button>
       </div>
+      <section class="section rise rise-3" aria-labelledby="wrong-title">
+        <h2 id="wrong-title">틀린 용어</h2>
+        <div class="panel" id="wrong-box"></div>
+      </section>
     </div>
   </section>
   </main>
@@ -656,7 +700,10 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
           <h2 id="p0-title">주제 고르기</h2>
           <p class="text-small topics-sub"><span id="p0-mode"></span> · 여러 개를 함께 고를 수 있어요</p>
         </div>
-        <button class="topic-all topic-clear" type="button" id="topic-clear">전체 해제</button>
+        <div class="topic-bulk">
+          <button class="topic-all topic-clear" type="button" id="topic-every">전체 선택</button>
+          <button class="topic-all topic-clear" type="button" id="topic-clear">전체 해제</button>
+        </div>
       </div>
       <div class="topic-groups" id="topic-groups"></div>
       <div class="topics-foot">
@@ -4931,7 +4978,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   var MODES = {
     en_copy: { name: "영어 따라 치기", unit: "WPM" },
     ko_copy: { name: "한국어 따라 치기", unit: "타/분" },
-    ko_recall: { name: "한국어 뜻 연습", unit: "타/분" }
+    ko_recall: { name: "한국어 뜻 고르기", unit: "정답" }
   };
   var MODE_KEYS = { "1": "en_copy", "2": "ko_copy", "3": "ko_recall" };
 
@@ -5220,8 +5267,15 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     $("topic-count").textContent = cnt ? "고른 주제 " + selectionLabel() + " · 용어 " + cnt + "개" : "주제를 하나 이상 골라 주세요.";
     $("p0-start").disabled = !cnt;
     $("topic-clear").disabled = !selection.cats.length;
+    $("topic-every").disabled = selection.cats.length === DATA.categories.length;
     if (keep) { var k = box.querySelector('[data-key="' + keep + '"]'); if (k) k.focus(); }
   }
+  // 모든 주제를 한 번에 선택
+  $("topic-every").addEventListener("click", function () {
+    selection.cats = DATA.categories.map(function (c) { return c.id; });
+    renderTopics();
+    $("p0-start").focus();
+  });
   // 고른 주제를 한 번에 모두 해제
   $("topic-clear").addEventListener("click", function () {
     selection.cats = [];
@@ -5299,6 +5353,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     show("s2");
     showTerm();
     startClock();
+    if (mode === "ko_recall") markStarted();   // 뜻 고르기는 보기가 뜨는 순간부터 잼
   }
 
   // ── S2 입력 처리 ───────────────────────────
@@ -5388,14 +5443,87 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
       }
       tt.appendChild(w);
     });
-    $("s2").querySelector(".practice").classList.toggle("is-overlay", round.mode !== "ko_recall");
+    var practice = $("s2").querySelector(".practice");
+    practice.classList.toggle("is-overlay", round.mode !== "ko_recall");
+    practice.classList.toggle("is-quiz", round.mode === "ko_recall");
+    renderChoices();
     input.setAttribute("aria-label", round.mode === "ko_recall" ? "용어 입력" : "보이는 용어를 그대로 입력");
     // 상태 문구(한/영 안내 등)는 입력하는 곳 바로 아래
-    if (round.mode === "ko_recall") input.after(statusEl);
+    if (round.mode === "ko_recall") $("choice-list").after(statusEl);
     else $("s2").querySelector(".term").after(statusEl);
-    resetInput("");
+    var skip = $("skip-btn");
+    skip.textContent = "모르겠어요"; skip.className = "button button--secondary";
+    if (document.activeElement === skip) skip.blur();
+    if (round.mode === "ko_recall") { if (document.activeElement === input) { suppressBlur = true; input.blur(); suppressBlur = false; } }
+    else resetInput("");
     if (a.target && round.mode !== "ko_recall") paintChars("");
   }
+
+  // ── 뜻 고르기: 보기 4개 (정답 1 + 같은 분류·분야에서 고른 오답 3) ──
+  function pickChoices(t) {
+    var used = {};
+    t.ko.forEach(function (k) { used[normalizeAnswer(k)] = 1; });
+    var catDom = {};
+    DATA.categories.forEach(function (c) { catDom[c.id] = c.domain; });
+    var tiers = [
+      DATA.terms.filter(function (x) { return x.categoryId === t.categoryId; }),
+      DATA.terms.filter(function (x) { return x.categoryId !== t.categoryId && catDom[x.categoryId] === catDom[t.categoryId]; }),
+      DATA.terms.filter(function (x) { return catDom[x.categoryId] !== catDom[t.categoryId]; })
+    ];
+    var wrongs = [];
+    tiers.forEach(function (list) {
+      shuffle(list.slice()).forEach(function (x) {
+        if (wrongs.length >= 3 || x.id === t.id) return;
+        var k = x.ko[0], n = normalizeAnswer(k);
+        if (used[n]) return;
+        used[n] = 1; wrongs.push(k);
+      });
+    });
+    return shuffle([t.ko[0]].concat(wrongs));
+  }
+  function renderChoices() {
+    var box = $("choice-list");
+    box.innerHTML = "";
+    box.hidden = round.mode !== "ko_recall";
+    if (box.hidden) return;
+    var a = cur();
+    if (!a.choices) a.choices = pickChoices(curTerm());
+    a.choices.forEach(function (k, i) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "choice"; b.dataset.i = i; b.lang = "ko";
+      b.innerHTML = '<span class="choice-num" aria-hidden="true">' + (i + 1) + "</span>";
+      b.appendChild(document.createTextNode(k));
+      b.setAttribute("aria-label", (i + 1) + "번 " + k);
+      box.appendChild(b);
+    });
+  }
+  function pickChoice(i) {
+    var a = cur();
+    if (feedback || a.outcome !== "pending" || !a.choices || i < 0 || i >= a.choices.length) return;
+    markStarted();
+    a.submitted = a.choices[i];
+    var ok = a.choices[i] === curTerm().ko[0];
+    var btns = $("choice-list").querySelectorAll(".choice");
+    btns.forEach(function (b, j) {
+      b.setAttribute("aria-disabled", "true");
+      if (a.choices[j] === curTerm().ko[0]) b.classList.add("is-correct");
+      else if (j === i) b.classList.add("is-picked-wrong");
+      else b.classList.add("is-dim");
+    });
+    if (ok) {
+      a.outcome = "correct";
+      feedback = "correct";
+      setStatus("✓ 정답", "answer");
+      nextTerm(700);
+    } else {
+      a.outcome = "wrong";
+      showWrong();
+    }
+  }
+  $("choice-list").addEventListener("click", function (e) {
+    var b = e.target.closest(".choice");
+    if (b && round && round.status === "playing") pickChoice(+b.dataset.i);
+  });
 
   function paintChars(judged, comp) {
     var a = cur();
@@ -5537,21 +5665,27 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   }
   function skipRecall() {
     var a = cur();
-    if (a.outcome !== "pending" || feedback) { input.focus(); return; }
+    if (feedback === "wrong") { nextTerm(0); return; }
+    if (a.outcome !== "pending" || feedback) return;
     markStarted();
     a.outcome = "skipped";
     a.submitted = null;
+    $("choice-list").querySelectorAll(".choice").forEach(function (b, j) {
+      b.setAttribute("aria-disabled", "true");
+      b.classList.add(a.choices && a.choices[j] === curTerm().ko[0] ? "is-correct" : "is-dim");
+    });
     showWrong();
   }
   function showWrong() {
     feedback = "wrong";
     if (isLast()) stopClock();
-    input.readOnly = true;
-    input.classList.add("is-answer-wrong");
-    input.setAttribute("aria-invalid", "true");
-    setStatusAnswer("정답: ", curTerm().ko);
+    setStatusAnswer("정답: ", [curTerm().ko[0]]);
     statusEl.appendChild(document.createTextNode(" · Enter로 다음"));
-    input.focus();
+    // 모르겠어요 버튼이 다음 버튼으로 바뀜
+    var skip = $("skip-btn");
+    skip.textContent = isLast() ? "결과 보기" : "다음";
+    skip.className = "button button--primary";
+    skip.focus();
   }
 
   function isLast() { return round.currentIndex === round.terms.length - 1; }
@@ -5658,6 +5792,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (statusEl.textContent === "클릭하면 이어서 칠 수 있어요.") setStatus("");
   });
   $("s2").addEventListener("mousedown", function (e) {
+    if (round && round.mode === "ko_recall") return;
     if (e.target.closest("button") || e.target === input) return;
     e.preventDefault();
     input.focus();
@@ -5741,9 +5876,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     var r = computeResult(round);
     $("r-speed").textContent = r.speed;
     $("r-unit").textContent = r.unit;
-    $("r-acc").textContent = round.mode === "ko_recall"
-      ? r.correctCount + " / " + r.total + " (" + r.accuracy + "%)"
-      : r.accuracy + "%";
+    $("r-acc").textContent = r.accuracy + "%";
+    if (round.mode === "ko_recall") { $("r-speed").textContent = r.correctCount + " / " + r.total; }
     $("r-time").textContent = fmtDuration(r.durationMs);
     $("r-mode").textContent = MODES[round.mode].name;
     $("r-cat").textContent = round.label;
@@ -5789,7 +5923,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     box.innerHTML = "";
     if (!list.length) {
       var p = document.createElement("p");
-      p.textContent = "틀린 용어가 없어요. " + round.terms.length + "개 모두 정확하게 쳤어요.";
+      p.textContent = "틀린 용어가 없어요. " + round.terms.length + "개 모두 " + (round.mode === "ko_recall" ? "맞혔어요." : "정확하게 쳤어요.");
       box.appendChild(p);
       return;
     }
@@ -5810,10 +5944,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         if (w.attempt.outcome === "skipped") add("모르겠어요", "wrong-skip");
         else add(w.attempt.submitted, "wrong-mine");
         dot();
-        w.term.ko.forEach(function (k, i) {
-          if (i) li.appendChild(document.createTextNode(" / "));
-          add(k, "answer");
-        });
+        add(w.term.ko[0], "answer");
       } else {
         add(w.attempt.target, "answer wrong-en", round.mode === "en_copy" ? "en" : "ko"); dot();
         add(w.attempt.input, "wrong-mine"); dot();
@@ -5842,6 +5973,11 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
         e.preventDefault();
         if (round.status === "paused") closeP1(); // Esc 한 번 더 = 계속하기
         else openP1();
+        return;
+      }
+      if (round.mode === "ko_recall" && round.status === "playing") {
+        if (/^[1-4]$/.test(e.key) && !e.repeat) { e.preventDefault(); pickChoice(+e.key - 1); return; }
+        if (e.key === "Enter") { e.preventDefault(); if (!e.repeat && feedback === "wrong") nextTerm(0); return; }
         return;
       }
       if (round.status === "playing" && document.activeElement !== input && e.target.tagName !== "BUTTON" && e.key.length === 1) {
