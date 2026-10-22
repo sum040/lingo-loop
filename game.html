@@ -281,12 +281,12 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .status-line--strong { color: var(--color-text); font-weight: 700; }
 
 /* ── 캐릭터: 픽셀 칸 18×16으로 그린 단순한 모양, 몸 색만 바뀜. 움직임은 부드럽게 ── */
-.ch-svg { display: block; overflow: visible; shape-rendering: crispEdges; }
+.ch-svg { display: block; overflow: visible; shape-rendering: geometricPrecision; }
 .ch-svg .ch-fill { fill: var(--ch, var(--ch-1)); stroke: var(--color-ink); stroke-width: 0.5px; paint-order: stroke; }
 .ch-svg .ch-ink { fill: var(--color-ink); }
 .ch-svg .ch-shine { fill: #fff; opacity: 0.55; }
 .ch-svg .ch-face { fill: #F7E6CF; stroke: var(--color-ink); stroke-width: 0.35px; paint-order: stroke; }
-.ch-svg .ch-tail { transform-box: fill-box; transform-origin: 0% 50%; animation: ch-tail 1.8s step-end infinite; }
+.ch-svg .ch-tail { transform-box: fill-box; transform-origin: 0% 50%; animation: ch-tail 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
 @keyframes ch-tail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-8deg); } }
 .ch-svg .ch-tear { fill: var(--tear); }
 .ch-svg .ch-shadow { fill: rgba(29, 29, 31, 0.12); shape-rendering: geometricPrecision; }
@@ -297,7 +297,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .is-happy .ch-svg .f-normal, .is-sad .ch-svg .f-normal, .is-wow .ch-svg .f-normal { display: none; }
 .is-happy .ch-svg .f-happy, .is-sad .ch-svg .f-sad, .is-wow .ch-svg .f-wow { display: inline; }
 
-/* 픽셀 캐릭터는 움직임을 두 장면으로 끊어 보여 줌 (부드럽게 조금씩 움직이면 픽셀 경계가 매 프레임 바뀌어 깜빡여 보임) */
+/* 움직임은 부드럽게. 깜빡임은 픽셀 맞춤(crispEdges)을 끄고 움직이는 층을 따로 그려(will-change) 막음 */
+.avatar-motion, .avatar-flip { will-change: transform; }
 @keyframes ch-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(0.5px); } }
 @keyframes ch-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.15); } }
 @keyframes ch-jump {
@@ -312,8 +313,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 @keyframes ch-step-r { 0%, 100% { transform: translateY(-1px); } 50% { transform: translateY(0); } }
 @keyframes ch-bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 @keyframes ch-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
-.ch-svg .ch-body-g { animation: ch-idle 1.6s step-end infinite; }
-.ch-svg .ch-eyes { animation: ch-blink 4.2s step-end infinite; }
+.ch-svg .ch-body-g { animation: ch-idle 2.8s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.ch-svg .ch-eyes { animation: ch-blink 4.2s ease-in-out infinite; }
 .mini-avatar .ch-svg * { animation: none !important; }
 
 .avatar { --ch: var(--ch-1); position: relative; display: grid; justify-items: center; inline-size: 96px; }
@@ -323,10 +324,10 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .avatar-flip { inline-size: 100%; block-size: 100%; transition: transform var(--dur-base) var(--ease); }
 .avatar.is-left .avatar-flip { transform: scaleX(-1); }
 .avatar.is-jump .avatar-motion { animation: ch-jump 640ms cubic-bezier(0.33, 0, 0.2, 1); }
-.avatar.is-wave .ch-arm-r { animation: ch-wave 380ms step-end 3; }
-.avatar.is-walk .ch-foot-l { animation: ch-step-l 340ms step-end infinite; }
-.avatar.is-walk .ch-foot-r { animation: ch-step-r 340ms step-end infinite; }
-.avatar.is-walk .avatar-motion { animation: ch-bounce 340ms step-end infinite; }
+.avatar.is-wave .ch-arm-r { animation: ch-wave 380ms cubic-bezier(0.45, 0, 0.55, 1) 3; }
+.avatar.is-walk .ch-foot-l { animation: ch-step-l 340ms ease-in-out infinite; }
+.avatar.is-walk .ch-foot-r { animation: ch-step-r 340ms ease-in-out infinite; }
+.avatar.is-walk .avatar-motion { animation: ch-bounce 340ms ease-in-out infinite; }
 .avatar.is-shake .avatar-motion { animation: ch-shake 300ms ease-in-out; }
 .avatar.is-out { opacity: 0.45; filter: grayscale(0.6); }
 .avatar-name {
