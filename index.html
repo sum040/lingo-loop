@@ -5145,6 +5145,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   function show(id) {
     screen = id;
     ["s1", "s2", "s3"].forEach(function (s) { $(s).hidden = s !== id; });
+    if (id !== "s2" && window.LLMotion) window.LLMotion.stop();
     window.scrollTo(0, 0);
   }
   function pushHistory() { try { history.pushState({ app: 1 }, ""); } catch (e) {} }
@@ -5509,6 +5510,8 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
     if (round.mode === "ko_recall") { if (document.activeElement === input) { suppressBlur = true; input.blur(); suppressBlur = false; } }
     else resetInput("");
     if (a.target && round.mode !== "ko_recall") paintChars("");
+    // 용어 모션 설명 (motion.js)
+    if (window.LLMotion) window.LLMotion.show(t, round.mode);
   }
 
   // ── 뜻 고르기: 보기 4개 (정답 1 + 같은 분류·분야에서 고른 오답 3) ──
@@ -6055,6 +6058,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   init();
 })();
 </script>
+<script src="motion.js"></script>
 
 </body>
 </html>
