@@ -4252,8 +4252,8 @@ window.LLMotionOffsets = {"1":[-12,0],"3":[-15,-11],"4":[0,32],"5":[-43,0],"6":[
 
   var CSS = [
     /* 자리: 모든 용어에서 같은 높이를 차지해서 아래 요소가 움직이지 않게 함 */
-    ".practice { --mo-h: clamp(140px, 23vh, 210px); }",
-    ".practice.is-quiz { --mo-h: clamp(110px, 17vh, 170px); }",
+    ".practice { --mo-h: clamp(210px, 34.5vh, 315px); }",
+    ".practice.is-quiz { --mo-h: clamp(165px, 25.5vh, 255px); }",
     ".mo-slot { position: relative; justify-self: center; inline-size: min(100%, calc(var(--mo-h) * 1.68)); block-size: var(--mo-h); }",
     ".practice.has-motion.is-overlay:not(.mo-short) { --mo-top: max(2vh, calc(var(--ov-top) - var(--mo-h) - var(--space-4))); padding-block-start: var(--mo-top); }",
     ".practice.has-motion.is-overlay:not(.mo-short) .typing-input { inset-block-start: calc(var(--mo-top) + var(--mo-h) + var(--space-4)); }",
@@ -4330,11 +4330,10 @@ window.LLMotionOffsets = {"1":[-12,0],"3":[-15,-11],"4":[0,32],"5":[-43,0],"6":[
     ".m-shimmer { overflow: hidden; } .m-shimmer::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); transform: translateX(-100%); animation: m-shim 1.3s infinite; }",
     "@keyframes m-shim { to { transform: translateX(100%); } }",
     ".m-pulse { animation: m-pulse 1.2s ease-in-out infinite; } @keyframes m-pulse { 50% { opacity: 0.35; } }",
-    ".m-src { position: absolute; right: 12px; bottom: 9px; font-size: 10px; color: #A39D94; font-weight: 600; z-index: 60; letter-spacing: 0; }",
-    "@media (prefers-reduced-motion: reduce) { .mo-layer { transition: none; } .m-caret::after, .m-spin svg, .m-spin > i, .m-shimmer::after, .m-pulse { animation: none; } }"
+    ".m-src { position: absolute; right: 12px; bottom: 9px; font-size: 10px; color: #A39D94; font-weight: 600; z-index: 60; letter-spacing: 0; }"
   ].join("\n");
 
-  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // 기기의 '동작 줄이기' 설정과 상관없이 모션을 항상 보여 줌 (숨 결정, 게임과 같은 방식)
   var R = { slot: null, canvas: null, timers: [], fn: null, term: null };
 
   // 분류 이름 (모션 없는 용어 카드에 씀)
@@ -4408,7 +4407,10 @@ window.LLMotionOffsets = {"1":[-12,0],"3":[-15,-11],"4":[0,32],"5":[-43,0],"6":[
     practice.style.setProperty("--mo-term-h", termH + "px");
     // 화면에 다 들어갈 때까지 모션 칸을 줄여 봄. 너무 작아지면 숨김
     practice.style.removeProperty("--mo-h");
-    var h = R.slot.offsetHeight, ok = fits(practice);
+    var h = R.slot.offsetHeight;
+    // 폭이 좁으면(폰) 카드 비율(420:250)에 맞춰 높이를 줄여 빈 공간이 생기지 않게 함
+    if (R.slot.offsetWidth < h * 1.68 - 1) { h = Math.floor(R.slot.offsetWidth / 1.68); practice.style.setProperty("--mo-h", h + "px"); }
+    var ok = fits(practice);
     while (!ok && h > 96) {
       h = Math.max(96, h - 12);
       practice.style.setProperty("--mo-h", h + "px");
@@ -4459,7 +4461,7 @@ window.LLMotionOffsets = {"1":[-12,0],"3":[-15,-11],"4":[0,32],"5":[-43,0],"6":[
     R.dur = dur;
     if (kit.srcText) { var s = document.createElement("div"); s.className = "m-src"; s.textContent = kit.srcText; layer.appendChild(s); }
     var q = kit.q.slice().sort(function (a, b) { return a.t - b.t; });
-    if (reduce || !R.on) {
+    if (!R.on) {
       // 움직임 없이 핵심 장면 하나만 보여 줌
       var rest = R.at != null ? R.at : kit.restAt != null ? kit.restAt : dur;
       q.forEach(function (it) { if (it.t <= rest) exec(it, true); });
