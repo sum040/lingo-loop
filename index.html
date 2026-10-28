@@ -150,7 +150,6 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .screen:not([hidden]) .rise-2 { animation-delay: 90ms; }
 .screen:not([hidden]) .rise-3 { animation-delay: 180ms; }
 .screen:not([hidden]) .rise-4 { animation-delay: 270ms; }
-@media (prefers-reduced-motion: reduce) { .screen .rise { animation: none !important; } }
 
 /* ── 버튼 (알약) ─────────────────── */
 .button {
@@ -271,7 +270,6 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .mode-card-meta .start { font-weight: 600; color: var(--color-brand); }
 .mode-card:disabled { background: var(--color-surface); color: var(--color-text-muted); outline: 1px dashed var(--color-border); outline-offset: -1px; cursor: not-allowed; }
 .mode-card:disabled .mode-card-desc, .mode-card:disabled .mode-card-example, .mode-card:disabled .mode-card-meta, .mode-card:disabled .arrow, .mode-card:disabled .start { color: inherit; }
-@media (prefers-reduced-motion: reduce) { .mode-card, .button, .chip { transition: none; } }
 
 .load-error { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .footnote { text-align: center; }
@@ -385,7 +383,6 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .choice.is-picked-wrong { border-color: var(--color-error); color: var(--color-error); }
 .choice.is-picked-wrong .choice-num { color: var(--color-error); }
 .choice.is-dim { opacity: 0.45; }
-@media (prefers-reduced-motion: reduce) { .choice { transition: none; animation: none; } .choice:active { transform: none; } }
 
 /* 입력 언어 미리 표시 */
 .lang-hint {
@@ -490,13 +487,6 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
 .scrim[hidden] { display: grid !important; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), visibility 0s var(--dur-fast); }
 .scrim .dialog { transition: transform var(--dur-slow) var(--ease-out), opacity var(--dur-base) var(--ease); }
 .scrim[hidden] .dialog { transform: translateY(12px) scale(0.97); opacity: 0; transition-duration: var(--dur-fast); }
-
-@media (prefers-reduced-motion: reduce) {
-  .button, .chip, .glossary-toggle, .domain-tab, .topic-all, .home-link, .mode-card, .glossary-caret,
-  .gl-float, .gl-float[hidden], .scrim, .scrim[hidden], .scrim .dialog, .scrim[hidden] .dialog { transition: none; }
-  .button:active, .chip:active, .glossary-toggle:active, .domain-tab:active, .topic-all:active, .mode-card:active { transform: none; }
-  .glossary:not([hidden]), .lang-hint:not([hidden]), #skip-btn:not([hidden]), .status-line:not(:empty) { animation: none; }
-}
 
 /* ── 반응형: 화면 크기에 맞춰 카드 배치와 크기를 조절해 스크롤을 줄임 ───── */
 /* 태블릿: 모드 카드 3칸을 유지하고 크기만 줄임 */
@@ -5251,7 +5241,7 @@ h2 { font-size: var(--text-section); font-weight: 700; line-height: 1.3; letter-
   window.addEventListener("scroll", updateGlFloat, { passive: true });
   window.addEventListener("resize", updateGlFloat);
   function scrollBehavior() {
-    return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    return "smooth";
   }
   $("gl-top").addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: scrollBehavior() });
